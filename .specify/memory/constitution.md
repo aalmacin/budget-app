@@ -1,11 +1,13 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: 0.0.0 (template) → 1.0.0 (initial ratification)
-Rationale: First concrete ratification of the constitution from the template.
-           MAJOR bump establishes the baseline (1.0.0) for future amendments.
+Version change: 1.0.0 → 1.1.0
+Rationale: MINOR bump — adds the "Commit message quality" rule under
+           Development Workflow & Quality Gates. This is materially new
+           guidance that constrains automated commit tooling; no principle
+           was removed or redefined.
 
-Principles defined:
+Principles (unchanged):
   - I.   Code Quality & Pattern Consistency
   - II.  Security-First Development (NON-NEGOTIABLE)
   - III. Backend Communication via Database Functions (NON-NEGOTIABLE)
@@ -13,19 +15,28 @@ Principles defined:
   - V.   User Experience Consistency
   - VI.  Performance via NextJS Best Practices
 
-Added sections:
-  - Technology Stack & Architectural Constraints
-  - Development Workflow & Quality Gates
-  - Governance
+Added in 1.1.0:
+  - Development Workflow & Quality Gates → "Commit message quality" bullet
 
-Removed sections: none (all template placeholders replaced)
+Removed: none
 
-Templates requiring updates:
+Templates / tooling propagated:
   - ✅ .specify/memory/constitution.md (this file)
-  - ✅ .specify/templates/plan-template.md (Constitution Check gate references constitution generically — no edit needed)
-  - ✅ .specify/templates/spec-template.md (no constitution-dependent content — no edit needed)
-  - ✅ .specify/templates/tasks-template.md (test task patterns remain compatible — critical-path Playwright requirement enforced at spec/plan time)
-  - ✅ AGENTS.md / CLAUDE.md (runtime guidance already aligned: types-required, no .env reads, no unsolicited commits)
+  - ✅ .claude/skills/speckit-git-commit/SKILL.md (instructs LLM to inspect
+        the diff and compose a descriptive message before committing)
+  - ✅ .specify/extensions/git/commands/speckit.git.commit.md (mirrors SKILL.md)
+  - ✅ .specify/extensions/git/scripts/bash/auto-commit.sh (accepts optional
+        commit-message override as 2nd arg, highest priority)
+  - ✅ .specify/extensions/git/scripts/powershell/auto-commit.ps1 (same)
+  - ✅ .specify/templates/plan-template.md (no edit needed — Constitution
+        Check references constitution generically)
+  - ✅ .specify/templates/spec-template.md (no edit needed)
+  - ✅ .specify/templates/tasks-template.md (no edit needed)
+
+History:
+  - 1.0.0 (2026-05-21): Initial ratification from template. Defined the six
+    principles above, the Technology Stack section, the Development Workflow
+    & Quality Gates section, and the Governance section.
 
 Follow-up TODOs: none
 -->
@@ -165,6 +176,16 @@ constitution amendment:
   either.
 - **No unsolicited commits**: automated tooling MUST NOT create git commits
   unless explicitly requested.
+- **Commit message quality**: When `/speckit-git-commit` or any other
+  automated commit pathway runs, the message MUST be a concise, change-
+  specific description: imperative verb (Add/Update/Fix/Remove/Refactor/
+  Document/Rename/Move) followed by the affected feature, file area, or
+  concept (e.g., `Add login server action with rate-limit guard`). First
+  line stays under ~70 characters; a body is added only when WHY is non-
+  obvious. Generic placeholders such as `[Spec Kit] Auto-commit after X`,
+  `WIP`, `update files`, `misc changes`, or `progress` are NOT acceptable.
+  If the change set is too varied to summarize honestly in one line, split
+  into multiple commits.
 
 ## Governance
 
@@ -190,4 +211,4 @@ Complexity that violates a principle MUST be justified in writing or refactored
 away. Agent-facing runtime guidance lives in `AGENTS.md` and `CLAUDE.md` and
 MUST stay aligned with this constitution.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-21 | **Last Amended**: 2026-05-21
+**Version**: 1.1.0 | **Ratified**: 2026-05-21 | **Last Amended**: 2026-05-21

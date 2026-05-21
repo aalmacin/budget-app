@@ -3,14 +3,20 @@
 # Automatically commit changes after a Spec Kit command completes.
 # Checks per-command config keys in git-config.yml before committing.
 #
-# Usage: auto-commit.sh <event_name>
+# Usage: auto-commit.sh <event_name> [commit_message]
 #   e.g.: auto-commit.sh after_specify
+#         auto-commit.sh after_specify "Add login server action with rate-limit guard"
+#
+# When [commit_message] is provided it takes priority over any value in
+# git-config.yml and over the generic fallback. The skill/command is expected
+# to pass a descriptive message derived from the actual change set.
 
 set -e
 
 EVENT_NAME="${1:-}"
+COMMIT_MSG_OVERRIDE="${2:-}"
 if [ -z "$EVENT_NAME" ]; then
-    echo "Usage: $0 <event_name>" >&2
+    echo "Usage: $0 <event_name> [commit_message]" >&2
     exit 1
 fi
 
@@ -128,8 +134,11 @@ fi
 _command_name=$(echo "$EVENT_NAME" | sed 's/^after_//' | sed 's/^before_//')
 _phase=$(echo "$EVENT_NAME" | grep -q '^before_' && echo 'before' || echo 'after')
 
-# Use custom message if configured, otherwise default
-if [ -z "$_commit_msg" ]; then
+# Priority: explicit override (from the calling skill, derived from the diff)
+# > per-event message in git-config.yml > generic fallback.
+if [ -n "$COMMIT_MSG_OVERRIDE" ]; then
+    _commit_msg="$COMMIT_MSG_OVERRIDE"
+elif [ -z "$_commit_msg" ]; then
     _commit_msg="[Spec Kit] Auto-commit ${_phase} ${_command_name}"
 fi
 

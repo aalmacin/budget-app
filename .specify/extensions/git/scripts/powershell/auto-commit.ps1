@@ -3,11 +3,18 @@
 # Automatically commit changes after a Spec Kit command completes.
 # Checks per-command config keys in git-config.yml before committing.
 #
-# Usage: auto-commit.ps1 <event_name>
+# Usage: auto-commit.ps1 <event_name> [commit_message]
 #   e.g.: auto-commit.ps1 after_specify
+#         auto-commit.ps1 after_specify "Add login server action with rate-limit guard"
+#
+# When [commit_message] is provided it takes priority over any value in
+# git-config.yml and over the generic fallback. The skill/command is expected
+# to pass a descriptive message derived from the actual change set.
 param(
     [Parameter(Position = 0, Mandatory = $true)]
-    [string]$EventName
+    [string]$EventName,
+    [Parameter(Position = 1, Mandatory = $false)]
+    [string]$CommitMessageOverride = ""
 )
 $ErrorActionPreference = 'Stop'
 
@@ -144,8 +151,11 @@ if ($d1 -eq 0 -and $d2 -eq 0 -and -not $untracked) {
 $commandName = $EventName -replace '^after_', '' -replace '^before_', ''
 $phase = if ($EventName -match '^before_') { 'before' } else { 'after' }
 
-# Use custom message if configured, otherwise default
-if (-not $commitMsg) {
+# Priority: explicit override (from the calling skill, derived from the diff)
+# > per-event message in git-config.yml > generic fallback.
+if ($CommitMessageOverride) {
+    $commitMsg = $CommitMessageOverride
+} elseif (-not $commitMsg) {
     $commitMsg = "[Spec Kit] Auto-commit $phase $commandName"
 }
 
