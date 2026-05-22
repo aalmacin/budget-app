@@ -227,7 +227,7 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 **Money entry**
 
 - **FR-008**: Users MUST be able to log an expense with at minimum: amount, category, date, notes, "paid by" (which adult), "for whom" (household, adult, or kid), and essential/non-essential tag (or a per-transaction essential split percentage).
-- **FR-009**: Users MUST be able to log income with at minimum: a **net (post-tax) amount**, source label (one of `Salary | Contract | Self-employed | Benefit | Refund | Gift` — used as descriptive metadata, NOT to drive any automatic tax or set-aside logic), date, and earner (which adult). v1 MUST NOT compute, withhold, or auto-aside any portion of income for taxes.
+- **FR-009**: Users MUST be able to log income with at minimum: a **net (post-tax) amount**, source label (one of `Salary | Contract | Self_employed | Benefit | Refund | Gift` — used as descriptive metadata, NOT to drive any automatic tax or set-aside logic), date, and earner (which adult). v1 MUST NOT compute, withhold, or auto-aside any portion of income for taxes.
 - **FR-010**: Users MUST be able to edit and delete any transaction they can see.
 - **FR-011**: A single transaction MUST be splittable into an essential portion and a non-essential portion (slider 0–100%) that are stored and reported separately.
 - **FR-011a**: System MUST provide a Quick Add screen reached from the dashboard FAB. Quick Add MUST present the household's most recent expenses (as a tile grid) and active subscriptions (as a list); the primary tap on either MUST log a new expense that copies the source's merchant, amount, category, "for whom", "paid by", essential split, and split rule, and MUST set the new transaction's date to today. Subscription rows MUST additionally expose a pencil-icon secondary action that navigates to that subscription's edit sheet. Quick Add MUST also expose a "+" affordance that opens the full Add Expense form for new merchants. Add Income remains reachable from the drawer as a separate action. The filter chips visible in the design (`Recent`, `Subs`, `Per kid`, `Merchants`, `Categories`) are non-normative: only `Recent` and `Subs` are MVP; the other three are post-v1 UI slicings of the same data and MAY be added later without spec change.
@@ -271,7 +271,7 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 
 **Canadian tax tracking** *(removed from v1 — see clarification §6)*
 
-> FR-030, FR-031, FR-032, FR-033 — **REMOVED.** No Taxes screen, CRA instalment timeline, deductions tracking, marginal-rate display, GST/HST set-aside, or province-specific tax profile in v1. Canadian-tax terminology survives only as income source labels (T4, T4A, CCB, etc.) used for descriptive metadata in the income form and reports. Re-introduction is a post-v1 roadmap item.
+> FR-030, FR-031, FR-032, FR-033 — **REMOVED.** No Taxes screen, CRA instalment timeline, deductions tracking, marginal-rate display, GST/HST set-aside, or province-specific tax profile in v1. Income source labels remain as descriptive metadata only — see clarification §9 for the final consumer-friendly enum (`Salary | Contract | Self_employed | Benefit | Refund | Gift`); T4/T4A/CCB-style labels were dropped in design v2. Re-introduction of tax tracking is a post-v1 roadmap item.
 
 **Settings**
 
@@ -290,7 +290,7 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 - **Member**: A person in a household. Has a role (Adult or Kid), name, age (for kids), optional avatar, (for adults) an associated user account and current monthly **net** income figure used by the split rule, and a nullable `deleted_at` timestamp. A non-null `deleted_at` hides the member from new-entry UI but preserves their references in historical transactions and reports.
 - **Account/User**: A login (email + password) attached to one or more household memberships.
 - **Category**: A spending classification (e.g. Groceries, Kids · all, Subscriptions). Has a name, default essential percentage, and optional monthly budget limit.
-- **Transaction**: A single money movement. Has type (expense/income), amount (net for income), date, category, notes, paid-by (Member), for-whom (Household or Member), essential split (percentage), source label for income (T4, T4A, etc. — metadata only), and optional link to a Subscription.
+- **Transaction**: A single money movement. Has type (expense/income), amount (net for income), date, category, notes, paid-by (Member), for-whom (Household or Member), essential split (percentage), source label for income (one of `Salary | Contract | Self_employed | Benefit | Refund | Gift` — metadata only, drives no tax behavior), and optional link to a Subscription.
 - **Subscription**: A recurring expense template that auto-creates Transactions. Has merchant, amount, cadence, next renewal date, paid-by, for-whom, essential split, and active/paused state.
 - **BudgetLimit**: A monthly cap per category (and optionally per month/year).
 

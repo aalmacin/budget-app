@@ -187,7 +187,7 @@ tests/
     ├── money.test.ts
     └── split.test.ts
 
-middleware.ts                            # Repo-root Next.js middleware → lib/supabase/middleware
+proxy.ts                                 # Repo-root Next.js proxy (formerly `middleware.ts`; renamed in Next.js 16) → lib/supabase/middleware
 playwright.config.ts
 vitest.config.ts
 ```

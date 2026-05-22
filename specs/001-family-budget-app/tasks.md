@@ -50,7 +50,7 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 - [X] T011 Migration `supabase/migrations/0001_init.sql`: enable `pgcrypto`, `citext`, `pg_cron` extensions; create `update_timestamp()` trigger function used by every table; create shared helper `auth_user_household_ids()` returning the set of household ids the calling `auth.uid()` belongs to (active members only, used by every RLS policy)
 - [X] T012 [P] Supabase server client (App Router-compatible, cookie-aware) in `lib/supabase/server.ts`
 - [X] T013 [P] Supabase browser client in `lib/supabase/client.ts`
-- [X] T014 Supabase request middleware (session refresh + per-request CSP nonce) in `lib/supabase/middleware.ts`, wired through `middleware.ts` at repo root
+- [X] T014 Supabase request middleware (session refresh + per-request CSP nonce) in `lib/supabase/middleware.ts`, wired through `proxy.ts` at repo root (Next.js 16 renamed the `middleware` file convention to `proxy`; the lib/supabase helper retains its name)
 - [X] T015 [P] Root layout with `next/font` (Geist + Geist Mono), CSP nonce header, viewport meta `width=device-width,initial-scale=1`, themed `<html>` in `app/layout.tsx`
 - [X] T016 [P] PWA manifest (name "Budget", short_name "Budget", theme color `#2a3d33` from HIFI palette, 192/512 icons) in `app/manifest.ts`
 - [X] T017 [P] Serwist service worker entry in `app/sw.ts` (app-shell precache + stale-while-revalidate for static, network-first for routes)
@@ -95,6 +95,7 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 - [ ] T040 [P] [US1] SQL function `update_member_income(member_id, monthly_income_cents)` rejecting kids and soft-deleted members in `supabase/functions/update_member_income.sql`
 - [ ] T041 [P] [US1] SQL function `update_household(patch)` (name only in v1; province/tax_profile fields don't exist) in `supabase/functions/update_household.sql`
 - [ ] T042 [P] [US1] Zod schemas for sign-in (incl. password policy ≥8 + ≥1 digit + ≥1 symbol per FR-001a) and household/member inputs in `lib/validators/auth.ts` and `lib/validators/household.ts`
+- [ ] T042a [US1] Configure Supabase Auth project-level password policy to enforce FR-001a (min length 8, ≥1 digit, ≥1 symbol, max length ≥64, paste allowed). Follow the manual steps already documented in `quickstart.md` §3 and verify in the Supabase dashboard → Authentication → Providers → Email. This is the server-side backstop for the Zod client-side rule in T042; without it admin-set / admin-reset passwords could bypass FR-001a.
 - [ ] T043 [P] [US1] Login page + server action (`supabase.auth.signInWithPassword`) with generic `Invalid login credentials` error (no enumeration) in `app/(auth)/login/page.tsx`
 - [ ] T044 [P] [US1] Onboarding "Create your household" page + server action calling `rpc('create_household', { name })` in `app/(auth)/onboarding/create-household/page.tsx`
 - [ ] T045 [US1] Sign-out server action and drawer affordance in `app/(app)/_actions/signout.ts` (consumed by `AppDrawer`)
@@ -188,7 +189,7 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 
 ### Tests for User Story 4
 
-- [ ] T075 [P] [US4] Playwright income-split + residual flow (two net incomes, by-income split on an odd amount, residual lands on higher-earning adult, shares sum exactly; zero-income fallback to equal; single-adult degeneracy) in `tests/e2e/by-income-split-residual.spec.ts`
+- [ ] T075 [P] [US4] Playwright split-rule flow covering all four FR-015 chips (`Adult A 100%`, `Adult B 100%`, `50/50`, `by income`): each chip renders correct per-adult shares on a known transaction; for `by income` on an odd amount the residual cent lands on the higher-earning adult and shares sum exactly; zero-income fallback to equal; single-adult degeneracy — in `tests/e2e/by-income-split-residual.spec.ts`
 
 ### Implementation for User Story 4
 
@@ -197,7 +198,7 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 - [ ] T078 [P] [US4] Family screen (sage "Spent on kids · <month>" hero with total month-spend on kids and headcount, segmented period control (All / This week / <month> / YTD) for the hero, member list + add adult by email + add kid + edit income; hides soft-deleted; per-kid cards show spent-this-month + top-category + last-activity-day — **NO per-kid budget bar, NO allowance, NO wallet** per spec clarifications §7 and §9) in `app/(app)/family/page.tsx`
 - [ ] T079 [P] [US4] `MemberCard`, `KidGrid` (wraps cleanly at 340 px viewport; per-kid card shows month-spent + most-recent-transaction summary, no allowance, no wallet, no budget), `AddAdultByEmail` (calls `rpc('add_adult_by_email')` and surfaces statuses), `AddKidForm` components in `components/family/`
 - [ ] T080 [US4] Income-split rule view in Settings consuming `compute_income_split` live in `app/(app)/settings/page.tsx`
-- [ ] T081 [US4] Add "Split: by income" chip on the full Add Expense form, rendering live per-adult shares via `apply_split_rule` in `app/(app)/add/page.tsx` (extends T073)
+- [ ] T081 [US4] Add the four split-rule chips required by FR-015 — `Adult A 100%`, `Adult B 100%`, `50/50`, `by income` — to the full Add Expense form via a new `<SplitRuleChips>` in `components/transactions/SplitRuleChips.tsx`. Selecting any chip renders the live per-adult share preview via `apply_split_rule`; `by income` uses the floor + residual-to-higher-earner algorithm (FR-015a). Wire into `app/(app)/add/page.tsx` (extends T073).
 
 **Checkpoint**: US4 functional — household scales to N kids; by-income split is derived live with exact-sum guarantee.
 
@@ -211,7 +212,7 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 
 ### Tests for User Story 5
 
-- [ ] T082 [P] [US5] Playwright budget flow (set $800 Groceries limit, log expenses, verify 75% progress, over-budget visual state, filter All/Essential/Treats) in `tests/e2e/budget.spec.ts`
+- [ ] T082 [P] [US5] Playwright budget flow: open Budget page → tap the edit-limit affordance on Groceries → save $800 via `rpc('set_category_budget')` → log expenses → verify 75% progress, over-budget visual state, filter All/Essential/Treats; also cover the clear-limit edge case (set to 0/null) in `tests/e2e/budget.spec.ts`
 
 ### Implementation for User Story 5
 
@@ -219,6 +220,7 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 - [ ] T084 [P] [US5] SQL function `get_budget_progress(year, month, filter)` returning per-category rows in `supabase/functions/get_budget_progress.sql`
 - [ ] T085 [P] [US5] `CategoryRow` progress-bar component with over-budget visual variant in `components/budget/CategoryRow.tsx`
 - [ ] T086 [P] [US5] Budget page (calls `rpc('get_budget_progress')`) in `app/(app)/budget/page.tsx`
+- [ ] T086a [P] [US5] "Edit limit" sheet on each `CategoryRow` calling `rpc('set_category_budget', { category_id, monthly_budget_cents })` (clearing by setting to null); refreshes progress via the realtime revalidate tag — in `components/budget/EditLimitSheet.tsx`, wired into `app/(app)/budget/page.tsx`. Required to fulfil the FR-018 "set a monthly limit per category" verb that T086 alone does not cover.
 - [ ] T087 [US5] All / Essential / Treats filter chips backed by a Redux UI slice in `store/slices/filters.ts` consumed by `app/(app)/budget/page.tsx`
 
 **Checkpoint**: US5 functional — budgets visible with live progress.
