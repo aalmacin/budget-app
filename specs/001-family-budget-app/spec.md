@@ -20,6 +20,12 @@ A calm, minimal mobile-first budgeting app for Canadian couples and families (2 
   - **Household creation** is user-initiated, in-app. On first sign-in, if the user has no `household_member` row, the app routes them to a "Create your household" screen. Creating the household inserts both the `household` row (caller becomes owner) and the caller's `household_member` row as the first adult.
   - **Adding additional members** is in-app: adults are added on the Family screen by entering their email (must match an existing Supabase auth user, otherwise the action errors). Kids are added by name + age (no email, no auth account).
 
+### Session 2026-05-21 (scope reductions)
+
+- Q: Should v1 ship the Canadian tax tracking surface (CRA instalments, deductions, GST/HST set-aside, tax-bucket auto-aside on income)? → A: No. **All of US8 is removed from v1.** No Taxes screen, no CRA instalment timeline, no deductions tracking, no GST/HST set-aside ledger, no tax-bucket auto-aside on income. Income amounts are entered as **net** (already-tax-handled), so no automatic withholding logic is required. The Canadian-tax terminology surface (T4 / T4A / CCB / etc.) remains only as income *source labels* for reporting context. The Taxes nav entry is removed from the drawer and the design's tax cards on the dashboard are not implemented.
+- Q: Should kid weekly allowances be implemented? → A: No. The hi-fi design's per-kid allowance cards (weekly budget, wallet balance, auto-transfer cadence) are **out of scope for v1**. Kids exist only so expenses can be tagged `for_member_id = <kid>`; per-person reports still attribute spending to the kid, and any "kid budget" desire is met by using categories like "Kids · all" with a monthly limit. Kid wallet balances, allowance schedules, and auto-transfer rules are explicitly deferred.
+- Q: Does v1 ship the wireframe's "Quick add" screen? → A: Yes. The FAB on the dashboard opens **Quick Add** (not the full Add Expense form directly). Quick Add is a tile grid that lets the user re-log a recent transaction or trigger a manual instance of an active subscription with one tap — copying the source's merchant, amount, category, "for whom", "paid by", essential split, and split rule, and setting today's date. From Quick Add, a "+" affordance opens the full Add Expense form for never-before-seen merchants. Add Income remains a separate menu action.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Secure household sign-in and onboarding (Priority: P1)
@@ -44,7 +50,7 @@ A family member signs in with admin-provisioned credentials. On first sign-in (o
 
 ### User Story 2 - Log expenses and income, see the household balance (Priority: P1)
 
-Either adult can quickly log an expense (amount, category, notes) or income, and the dashboard reflects the new running balance and recent activity in real time across both adults' devices.
+Either adult can quickly log an expense (amount, category, notes) or income, and the dashboard reflects the new running balance and recent activity in real time across both adults' devices. Income amounts are entered as **net** (post-tax) — v1 does no automatic tax withholding or set-aside.
 
 **Why this priority**: Capturing money in/out is the core job of a budgeting app. Without it the product has no value.
 
@@ -53,9 +59,26 @@ Either adult can quickly log an expense (amount, category, notes) or income, and
 **Acceptance Scenarios**:
 
 1. **Given** an empty household, **When** an adult logs an expense of $45.20 in "Groceries", **Then** the dashboard balance decreases by $45.20 and the transaction appears at the top of recent activity.
-2. **Given** an income of $2,400 logged as T4 employment, **When** the user saves it, **Then** the dashboard balance increases by $2,400 and the income appears in the transactions list.
+2. **Given** an income of $2,400 net logged as "T4 employment" source, **When** the user saves it, **Then** the dashboard balance increases by $2,400 (no automatic tax-bucket deduction) and the income appears in the transactions list.
 3. **Given** a transaction was logged on Adult A's device, **When** Adult B opens the app, **Then** the same transaction is visible without manual sync.
 4. **Given** a transaction with an incorrect amount, **When** the user edits or deletes it, **Then** balances and lists update accordingly.
+
+---
+
+### User Story 2b - Quick Add by tile (Priority: P1)
+
+Tapping the dashboard FAB opens a Quick Add screen instead of the full Add Expense form. The screen shows the household's most recent and recurring transactions as tiles; tapping a tile logs a new transaction that copies the source's merchant, amount, category, "for whom", "paid by", essential split, and split rule, and sets today's date. A "+" in the corner falls through to the full Add Expense form for never-before-seen merchants.
+
+**Why this priority**: Most family spending is repeat (groceries, daycare, music lessons, the same gas station). One-tap re-logging meets SC-002's "no more than 4 taps" goal and replaces full-form entry as the default path.
+
+**Independent Test**: With a household of 4 prior transactions and 3 active subscriptions, opening Quick Add shows ≥7 tiles. Tapping the "Whole Foods · $142.30" tile creates a new transaction with the same tags as the original and today's date; balances and recent activity update; one tap suffices.
+
+**Acceptance Scenarios**:
+
+1. **Given** at least one prior expense exists, **When** the user opens Quick Add from the dashboard FAB, **Then** the most-recent unique merchants appear as tiles in the "Recent" tab.
+2. **Given** active subscriptions exist, **When** the user opens the "Subs" tab, **Then** each active subscription is shown with its next-renewal date and an action to log a manual instance right now.
+3. **Given** the user taps a Quick Add tile, **When** the action completes, **Then** the dashboard balance reflects the new transaction within 5 s and the user is returned to the dashboard.
+4. **Given** the user taps "+" on Quick Add, **When** the full Add Expense form opens, **Then** all fields are empty (a normal first-time entry).
 
 ---
 
@@ -141,22 +164,6 @@ Users can view four reports: (a) spend over time, (b) cashflow KPIs with insight
 
 ---
 
-### User Story 8 - Canadian tax tracking (CRA) (Priority: P3)
-
-Self-employed or mixed-income households can track CRA instalments (Mar 15 / Jun 15 / Sep 15 / Dec 15), categorized deductions using Canadian terms (Home office · T2125, Vehicle · business km, Tuition · T2202, Private health premiums), GST/HST set-aside, and key deadlines (T1 personal Apr 30, self-employed Jun 15).
-
-**Why this priority**: Differentiator for the Canadian market and high-value at filing time, but not required for everyday budgeting.
-
-**Independent Test**: Can be tested by selecting a tax profile (e.g. Sole Proprietor · ON), then verifying the timeline shows the right CRA deadlines, the deductions list uses Canadian terminology, and a marginal rate display reflects the chosen province.
-
-**Acceptance Scenarios**:
-
-1. **Given** a Sole Proprietor · ON profile, **When** the user opens the Taxes screen, **Then** the four CRA instalment deadlines appear with their target dates.
-2. **Given** a logged deduction tagged "Home office · T2125", **When** the user views the deductions list, **Then** it appears with the correct Canadian category and amount.
-3. **Given** GST/HST set-aside is enabled, **When** an applicable income is logged, **Then** a portion is automatically routed into the GST/HST bucket.
-
----
-
 ### User Story 9 - Subscriptions and recurring expenses (Priority: P3)
 
 Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, daycare, music lessons, etc.) with cadence and renewal dates. Each subscription can be tagged "for whom" and as essential or treats. Reports surface recurring totals and overlapping streaming subs to flag savings opportunities.
@@ -178,7 +185,6 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 - A household with 6+ kids must remain legible (kid grid wraps; no truncation or horizontal overflow on a 340 px-wide phone frame).
 - A single-adult household: income-proportional split degenerates to 100% one adult; "by income" chip is shown but not meaningful — the UI should still work.
 - Both adults log the same expense within seconds (potential duplicate): the system should not block, but should make duplicates easy to spot and delete.
-- A user changes province in settings: tax timelines and deductions adjust without breaking previously logged data.
 - A user enters an email on the Family screen that has no matching Supabase auth account: the action errors with a clear message and creates no pending state.
 - A user enters their own email on the Family screen: idempotent no-op (silent success).
 - A user enters the email of an adult already in this household: idempotent no-op (silent success).
@@ -213,9 +219,10 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 **Money entry**
 
 - **FR-008**: Users MUST be able to log an expense with at minimum: amount, category, date, notes, "paid by" (which adult), "for whom" (household, adult, or kid), and essential/non-essential tag (or a per-transaction essential split percentage).
-- **FR-009**: Users MUST be able to log income with at minimum: amount, source/type (T4 employment, T4A · contract, Self-employed, CCB, Refund, Gift), date, and earner (which adult).
+- **FR-009**: Users MUST be able to log income with at minimum: a **net (post-tax) amount**, source label (T4 employment, T4A · contract, Self-employed, CCB, Refund, Gift — used as descriptive metadata, NOT to drive any automatic tax or set-aside logic), date, and earner (which adult). v1 MUST NOT compute, withhold, or auto-aside any portion of income for taxes.
 - **FR-010**: Users MUST be able to edit and delete any transaction they can see.
 - **FR-011**: A single transaction MUST be splittable into an essential portion and a non-essential portion (slider 0–100%) that are stored and reported separately.
+- **FR-011a**: System MUST provide a Quick Add screen reached from the dashboard FAB. Quick Add MUST present the household's most recent expenses and active subscriptions as tiles; tapping a tile MUST log a new expense that copies the source's merchant, amount, category, "for whom", "paid by", essential split, and split rule, and MUST set the new transaction's date to today. Quick Add MUST also expose a "+" affordance that opens the full Add Expense form for new merchants. Add Income remains reachable from the drawer as a separate action.
 - **FR-012**: Logging income MUST update the derived household income-proportional split percentages.
 
 **Categories, defaults, and split rules**
@@ -254,16 +261,13 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 - **FR-028**: System MUST auto-log a transaction on each renewal date with the subscription's saved tags ("for whom", essential/treats, paid-by).
 - **FR-029**: Subscription management MUST surface overlapping/duplicative subs (e.g. multiple streaming services) for savings review.
 
-**Canadian tax tracking**
+**Canadian tax tracking** *(removed from v1 — see clarification §6)*
 
-- **FR-030**: System MUST use Canadian tax terminology (CRA instalments, T1, T4, T4A, T2125, T2202, GST/HST, CCB, TFSA, RESP) throughout tax-related screens.
-- **FR-031**: System MUST display the four CRA instalment deadlines (Mar 15 / Jun 15 / Sep 15 / Dec 15) and the personal/self-employed filing deadlines (Apr 30 / Jun 15) for the active tax year.
-- **FR-032**: System MUST allow users to select a province and a tax profile (e.g. Sole Proprietor · ON), and reflect this in the marginal rate display and applicable deductions.
-- **FR-033**: System MUST allow categorized deduction tracking (Home office · T2125, Vehicle · business km, Tuition · T2202, Private health premiums) and a GST/HST set-aside bucket.
+> FR-030, FR-031, FR-032, FR-033 — **REMOVED.** No Taxes screen, CRA instalment timeline, deductions tracking, marginal-rate display, GST/HST set-aside, or province-specific tax profile in v1. Canadian-tax terminology survives only as income source labels (T4, T4A, CCB, etc.) used for descriptive metadata in the income form and reports. Re-introduction is a post-v1 roadmap item.
 
 **Settings**
 
-- **FR-034**: Settings MUST include household members management, currency display (CAD), tax profile, and the income-proportional split rule view.
+- **FR-034**: Settings MUST include household members management, currency display (CAD), and the income-proportional split rule view.
 - **FR-035**: Settings MUST allow editing of an "essential rule" per category.
 
 **Platform & presentation**
@@ -274,15 +278,13 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 
 ### Key Entities *(include if feature involves data)*
 
-- **Household**: A shared financial unit; owns all data below. Has a name, currency (CAD), province, tax profile, and an income-proportional split rule derived from member incomes.
-- **Member**: A person in a household. Has a role (Adult or Kid), name, age (for kids), optional avatar, (for adults) an associated user account and current monthly income figure used by the split rule, and a nullable `deleted_at` timestamp. A non-null `deleted_at` hides the member from new-entry UI but preserves their references in historical transactions and reports.
+- **Household**: A shared financial unit; owns all data below. Has a name, currency (CAD), and an income-proportional split rule derived from member incomes.
+- **Member**: A person in a household. Has a role (Adult or Kid), name, age (for kids), optional avatar, (for adults) an associated user account and current monthly **net** income figure used by the split rule, and a nullable `deleted_at` timestamp. A non-null `deleted_at` hides the member from new-entry UI but preserves their references in historical transactions and reports.
 - **Account/User**: A login (email + password) attached to one or more household memberships.
-- **Category**: A spending classification (e.g. Groceries, Kids · RESP, Subscriptions). Has a name, default essential percentage, and optional monthly budget limit.
-- **Transaction**: A single money movement. Has type (expense/income), amount, date, category, notes, paid-by (Member), for-whom (Household or Member), essential split (percentage), source/type for income (T4, T4A, etc.), and optional link to a Subscription.
+- **Category**: A spending classification (e.g. Groceries, Kids · all, Subscriptions). Has a name, default essential percentage, and optional monthly budget limit.
+- **Transaction**: A single money movement. Has type (expense/income), amount (net for income), date, category, notes, paid-by (Member), for-whom (Household or Member), essential split (percentage), source label for income (T4, T4A, etc. — metadata only), and optional link to a Subscription.
 - **Subscription**: A recurring expense template that auto-creates Transactions. Has merchant, amount, cadence, next renewal date, paid-by, for-whom, essential split, and active/paused state.
 - **BudgetLimit**: A monthly cap per category (and optionally per month/year).
-- **Deduction**: A tax-relevant entry referencing a Canadian category (T2125 home office, T2202 tuition, etc.) with amount, date, and notes.
-- **TaxProfile**: Province, filer type (employee, sole proprietor, mixed), GST/HST registrant flag, and resulting filing/instalment deadlines.
 
 ## Success Criteria *(mandatory)*
 
@@ -295,13 +297,12 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 - **SC-005**: At least 90% of test users can correctly identify "how much we spent on Mia this month" and "what is essential vs treats" in under 30 seconds without help.
 - **SC-006**: The per-person pie chart's "include general expenses" toggle recomposes the chart and updates the legend in under 500 ms on a mid-range mobile device.
 - **SC-007**: 95% of subscription auto-logs are created within 24 hours of their scheduled renewal date.
-- **SC-008**: A user can configure a tax profile (Sole Proprietor · ON) and see the four CRA instalment deadlines for the current year without any text input beyond province selection.
+- **SC-008**: From an open dashboard, re-logging a recent expense via Quick Add takes no more than 2 taps (open Quick Add, tap tile).
 - **SC-009**: Editing a single transaction's essential split updates dashboard, budget, and reports figures with no visible inconsistencies.
 
 ## Assumptions
 
 - All amounts and budgets are in **CAD**; multi-currency is out of scope for v1.
-- Default province is **Ontario**, configurable in settings; tax behavior swaps automatically for BC/AB/QC where rates and PST/QST handling differ.
 - Each household has exactly **2 adults** and any number of kids; single-parent households can also be supported (income split degenerates to 100% one adult).
 - Authentication is **email + password**, with user accounts (`auth.users` rows) provisioned by an administrator directly in Supabase. The app exposes no signup or public-registration path in v1; OAuth/social providers and self-service signup are out of scope for v1.
 - **Household creation** is user-initiated, in-app, on first sign-in when the user has no membership. The admin creates only the Supabase `auth.users` row — never the household. Subsequent adults are attached in-app via email lookup against `auth.users`; kids are added in-app by name + age. Email-delivered invitations are out of scope for v1.

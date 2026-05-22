@@ -37,6 +37,15 @@ All four reports are read-only RPCs. Each returns a shape designed to drop direc
 - When `include_general = true`: `share_of_general_cents` for each adult is computed as `sum(general_expense.amount_cents) * compute_income_split(household_id).ratio`. Kids' share stays 0 (kids do not absorb general expenses). The UI sums `spent_cents + share_of_general_cents` for the pie slice.
 - Drives FR-025. The 500ms recompose target (SC-006) is met because the same RPC is hit with the toggle flipped, and the result set is small (≤ ~10 rows).
 
+## `apply_split_rule(transaction_id uuid)` → `setof record { adult_id uuid, owed_cents bigint }`
+
+Returns each active adult's share for a transaction whose `split_rule` is non-null. Shares always sum exactly to `transaction.amount_cents` per spec clarification §3: each share is `floor(amount * ratio)`, the residual cent is assigned to the **higher-earning adult** (ties broken by display order — lower `created_at`). When both incomes are zero, ratios fall back to equal split and the residual still lands on the display-order Adult A.
+
+- Args: `{ transaction_id }`
+- Returns: `[{ adult_id, owed_cents }, ...]` ordered by `display_order` ascending.
+- Used by the Add-Expense screen's "Paid by · split" card for live preview and by the per-person report when "include general expenses" is on.
+- Errors: `42501` RLS denial if transaction is outside the caller's household.
+
 ## `essentials_breakdown(year smallint, month smallint)` → record
 
 - Returns:

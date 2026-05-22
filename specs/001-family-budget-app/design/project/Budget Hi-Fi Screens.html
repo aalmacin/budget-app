@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1920">
+  <title>Budget — Hi-Fi Screens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #efe9d8; color: #1c2622; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Geist', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    button { font-family: inherit; cursor: pointer; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(28,38,34,0.18); border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="android-frame.jsx"></script>
+  <script type="text/babel" src="hifi-shared.jsx"></script>
+  <script type="text/babel" src="hifi-screens.jsx"></script>
+  <script type="text/babel" src="hifi-screens-2.jsx"></script>
+  <script type="text/babel">
+    const { DesignCanvas, DCSection, DCArtboard } = window;
+
+    const Frame = ({ kind, children }) => (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', height: '100%', paddingTop: 14 }}>
+        {kind === 'ios'
+          ? <IOSDevice width={402} height={874}>{children}</IOSDevice>
+          : <AndroidDevice width={412} height={892}>{children}</AndroidDevice>}
+      </div>
+    );
+
+    function App() {
+      return (
+        <DesignCanvas>
+          <DCSection id="entry" title="Entry">
+            <DCArtboard id="login" label="Login · iOS" width={460} height={930}>
+              <Frame kind="ios"><ScreenLogin /></Frame>
+            </DCArtboard>
+            <DCArtboard id="dashboard" label="Dashboard · iOS" width={460} height={930}>
+              <Frame kind="ios"><ScreenDashboard /></Frame>
+            </DCArtboard>
+          </DCSection>
+          <DCSection id="money-in-out" title="Money in & out">
+            <DCArtboard id="add-exp" label="Add expense · iOS" width={460} height={930}>
+              <Frame kind="ios"><ScreenAddExpense /></Frame>
+            </DCArtboard>
+            <DCArtboard id="add-inc" label="Log income · Android" width={470} height={930}>
+              <Frame kind="android"><ScreenAddIncome /></Frame>
+            </DCArtboard>
+            <DCArtboard id="tx" label="Transactions · Android" width={470} height={930}>
+              <Frame kind="android"><ScreenTransactions /></Frame>
+            </DCArtboard>
+          </DCSection>
+          <DCSection id="overview" title="Overview & insights">
+            <DCArtboard id="budget" label="Budget · iOS" width={460} height={930}>
+              <Frame kind="ios"><ScreenBudget /></Frame>
+            </DCArtboard>
+            <DCArtboard id="reports" label="Reports · iOS" width={460} height={930}>
+              <Frame kind="ios"><ScreenReports /></Frame>
+            </DCArtboard>
+            <DCArtboard id="taxes" label="Taxes · Android" width={470} height={930}>
+              <Frame kind="android"><ScreenTaxes /></Frame>
+            </DCArtboard>
+          </DCSection>
+          <DCSection id="household" title="Household">
+            <DCArtboard id="family" label="Family · iOS" width={460} height={930}>
+              <Frame kind="ios"><ScreenFamily /></Frame>
+            </DCArtboard>
+            <DCArtboard id="settings" label="Settings · iOS" width={460} height={930}>
+              <Frame kind="ios"><ScreenSettings /></Frame>
+            </DCArtboard>
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
