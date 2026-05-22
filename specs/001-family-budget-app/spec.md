@@ -7,22 +7,38 @@
 
 A calm, minimal mobile-first budgeting app for Canadian couples and families (2 adults + any number of kids) covering household expenses, income, taxes, budgets, transactions, reports, and subscriptions — with family-aware tagging, essential/non-essential breakdowns, and income-proportional cost-sharing between adults.
 
+## Clarifications
+
+### Session 2026-05-21
+
+- Q: When a household member (adult or kid) is removed, what should happen to transactions tagged to that member via `paid_by_member_id` / `for_member_id`? → A: Soft-delete the member (`deleted_at` set). Transactions keep their member FK. Deleted members are hidden from new-transaction selectors, family screen, and "for whom" filter chips, but still appear in historical reports so prior totals remain attributable.
+- Q: How should account / household deletion work (PIPEDA right-to-erasure)? → A: Out of scope for v1. Full account or household deletion is handled manually by operations on user request. v1 ships only sign-out and member soft-delete (FR-007a). Self-serve deletion goes on the post-v1 roadmap.
+- Q: When an income-proportional split produces fractional cents, how is the residual allocated so shares sum exactly to the transaction amount? → A: Floor each adult's share to whole cents, then assign the residual cent(s) to the higher-earning adult. Shares always sum exactly to the transaction total. For equal-income (or zero-income fallback) splits, the residual goes to Adult A in display order.
+- Q: What password strength policy should the signup form enforce? → A: Minimum 8 characters, AND at least one number, AND at least one symbol. Allow paste; max length 64. Enforced both client-side (Zod, immediate feedback) and on the Supabase Auth project config.
+- Q: How is the invitation email delivered to the second adult? → A: Hybrid model with three responsibilities:
+  - **Account creation** (creating a Supabase `auth.users` row + initial password) is admin-only via the Supabase dashboard — the app has no signup page, no invite tokens, and no email-delivery integration.
+  - **Household creation** is user-initiated, in-app. On first sign-in, if the user has no `household_member` row, the app routes them to a "Create your household" screen. Creating the household inserts both the `household` row (caller becomes owner) and the caller's `household_member` row as the first adult.
+  - **Adding additional members** is in-app: adults are added on the Family screen by entering their email (must match an existing Supabase auth user, otherwise the action errors). Kids are added by name + age (no email, no auth account).
+
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Secure household account access (Priority: P1)
+### User Story 1 - Secure household sign-in and onboarding (Priority: P1)
 
-A family member creates an account and signs in so the household can begin tracking shared finances privately. New members can be invited into the same household so both adults see the same data.
+A family member signs in with admin-provisioned credentials. On first sign-in (or any sign-in while not yet in a household), the app routes them to a "Create your household" screen where they name the household and become its first adult/owner. Subsequent adults are added in-app by email lookup; kids by name + age.
 
-**Why this priority**: Without authentication and a household concept, no other feature is usable. This is the entry point.
+**Why this priority**: Without authentication and a household, no other feature is usable. This is the entry point. v1 has no self-service signup — admins create the `auth.users` row — but household creation, member addition, and all subsequent app behavior are user-driven.
 
-**Independent Test**: Can be fully tested by signing up with an email/password, signing back out, signing back in, inviting a second adult, and confirming both adults see the same (initially empty) household state.
+**Independent Test**: Admin pre-creates two Supabase user accounts (Alex and Bea). Sign in as Alex → land on "Create your household" → enter a name → land on empty dashboard → open Family screen → add Bea by email → sign out → sign in as Bea → land directly on the same dashboard (no creation prompt, since Bea is now a member).
 
 **Acceptance Scenarios**:
 
-1. **Given** a visitor with no account, **When** they provide email and password and submit signup, **Then** they land in the dashboard of an empty household they own.
-2. **Given** an existing user, **When** they enter correct credentials, **Then** they see their household's current dashboard; with incorrect credentials they see a clear error and remain on the login screen.
-3. **Given** a household owner, **When** they invite a second adult by email, **Then** that person can join the same household and see all shared data after accepting.
-4. **Given** a signed-in user, **When** they sign out, **Then** subsequent visits require re-authentication.
+1. **Given** an admin-provisioned user with no household membership, **When** they sign in for the first time, **Then** they are routed to a "Create your household" screen and cannot reach the dashboard until they create one.
+2. **Given** the "Create your household" screen, **When** the user enters a household name and submits, **Then** a new household is created with the caller as owner and first adult, and the user is routed to the empty dashboard.
+3. **Given** an admin-provisioned user, **When** they enter incorrect credentials on the sign-in screen, **Then** they see a clear error and remain on the sign-in screen.
+4. **Given** Alex is signed in with an existing household and Bea has an admin-created Supabase account, **When** Alex enters Bea's email on the Family screen, **Then** Bea is attached to Alex's household as the second adult; Bea sees the same shared data after she signs in.
+5. **Given** Alex enters an email on the Family screen that does NOT match any Supabase auth account, **When** they submit, **Then** the action fails with a clear "No account exists for that email — ask the admin to create one first" message and no member row is created.
+6. **Given** a signed-in user, **When** they sign out, **Then** subsequent visits require re-authentication.
+7. **Given** a visitor who is not an admin-provisioned user, **When** they reach the app, **Then** the only available action is sign-in — no signup form is present and no public registration path exists.
 
 ---
 
@@ -163,6 +179,10 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 - A single-adult household: income-proportional split degenerates to 100% one adult; "by income" chip is shown but not meaningful — the UI should still work.
 - Both adults log the same expense within seconds (potential duplicate): the system should not block, but should make duplicates easy to spot and delete.
 - A user changes province in settings: tax timelines and deductions adjust without breaking previously logged data.
+- A user enters an email on the Family screen that has no matching Supabase auth account: the action errors with a clear message and creates no pending state.
+- A user enters their own email on the Family screen: idempotent no-op (silent success).
+- A user enters the email of an adult already in this household: idempotent no-op (silent success).
+- A user tries to add a third active adult: action is rejected with a clear "Households are limited to 2 adults" message; the user must soft-delete one of the existing adults first.
 - A user edits or deletes a transaction that was already counted in a closed budget period: totals recompute correctly.
 - Splitting a transaction with a 0% or 100% slider value: stored as fully essential or fully treats.
 - Network is offline during expense entry: the entry is queued and syncs when connectivity returns (PWA expectation).
@@ -175,16 +195,20 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 
 **Authentication & Household**
 
-- **FR-001**: System MUST allow users to sign up with email and password.
+- **FR-001**: System MUST allow users to sign in with email and password. Self-service signup MUST NOT be exposed in v1; user accounts and household memberships are provisioned by an administrator directly in Supabase. The app MUST NOT render a signup form or any public registration path.
+- **FR-001a**: Administrator-set passwords MUST be at least 8 characters long AND contain at least one digit (0–9) AND at least one symbol (any non-alphanumeric printable character), with no character-class beyond those, paste allowed, and a maximum length of at least 64. This policy MUST be enforced at the Supabase Auth project configuration level so it applies to admin-created and admin-reset passwords.
 - **FR-002**: System MUST allow users to sign in and sign out, and persist sessions across app reloads until explicit sign-out.
-- **FR-003**: System MUST support a household concept where multiple adults share the same financial data after invitation.
-- **FR-004**: System MUST allow a household owner to invite another adult to join their household.
+- **FR-003**: System MUST support a household concept where multiple adults share the same financial data. Household *creation* is user-initiated in-app: on sign-in, if the authenticated user has no `household_member` row, the app MUST route them to a "Create your household" screen and MUST prevent access to any other authenticated route until they either create a household (becoming its owner and first adult) or are added to one by another adult.
+- **FR-004**: System MUST allow an existing household member to add a second adult through the in-app Family screen by entering the adult's email. If the email matches an existing Supabase auth user, that user MUST be attached to the household as a `household_member` with `role='adult'`. If the email does NOT match any auth user, the operation MUST fail with a clear message ("No account exists for that email — ask the admin to create one first") and MUST NOT create any pending state, invite token, or send any email.
+- **FR-004a**: System MUST allow an existing household member to add a kid through the in-app Family screen by entering name and age. Kids do not have an `auth.users` account and are stored as `household_member` rows with `user_id = null`, `role='kid'`.
+- **FR-004b**: Adult-add MUST be idempotent: if the entered email matches a user who is already a member of this household, the action MUST be a no-op (silent success). It MUST also enforce the 2-adult cap (FR-005) and reject the action if the household already has 2 active (non-soft-deleted) adults.
 
 **Family**
 
 - **FR-005**: System MUST allow up to 2 adults and any number of children per household.
 - **FR-006**: Each member MUST have at minimum a name; kids MUST also have an age.
 - **FR-007**: The UI MUST scale to any number of kids without truncation or horizontal overflow on a 340 px-wide mobile viewport.
+- **FR-007a**: Removing a household member MUST soft-delete them: the member record persists with a `deleted_at` timestamp, all transactions referencing them remain intact and continue to render in historical reports. Soft-deleted members MUST be hidden from add-transaction selectors, the family screen, and "for whom" filter chips. Soft-deleted adults free the 2-adult cap, allowing a replacement adult to be added or invited.
 
 **Money entry**
 
@@ -199,6 +223,7 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 - **FR-013**: System MUST provide sensible default categories (Groceries, Utilities, Transport, Kids, Health, Subscriptions, etc., with Canadian-context examples such as Rogers, Bell, RESP, TFSA).
 - **FR-014**: Each category MUST be able to carry a default essential percentage (e.g. Groceries default 80% essential) which applies automatically on new entries unless overridden.
 - **FR-015**: System MUST offer at least these split-rule options for shared expenses: "Adult A 100%", "Adult B 100%", "50/50", "by income" — and "by income" MUST be computed from current logged adult incomes, not a hard-coded percentage.
+- **FR-015a**: When a split rule produces fractional cents, each adult's share MUST be floored to whole cents and the residual cent(s) MUST be assigned to the higher-earning adult (or to Adult A in display order when incomes are equal or both zero). Shares MUST always sum exactly to the transaction's total amount.
 
 **Dashboard**
 
@@ -250,7 +275,7 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 ### Key Entities *(include if feature involves data)*
 
 - **Household**: A shared financial unit; owns all data below. Has a name, currency (CAD), province, tax profile, and an income-proportional split rule derived from member incomes.
-- **Member**: A person in a household. Has a role (Adult or Kid), name, age (for kids), optional avatar, and (for adults) an associated user account and current monthly income figure used by the split rule.
+- **Member**: A person in a household. Has a role (Adult or Kid), name, age (for kids), optional avatar, (for adults) an associated user account and current monthly income figure used by the split rule, and a nullable `deleted_at` timestamp. A non-null `deleted_at` hides the member from new-entry UI but preserves their references in historical transactions and reports.
 - **Account/User**: A login (email + password) attached to one or more household memberships.
 - **Category**: A spending classification (e.g. Groceries, Kids · RESP, Subscriptions). Has a name, default essential percentage, and optional monthly budget limit.
 - **Transaction**: A single money movement. Has type (expense/income), amount, date, category, notes, paid-by (Member), for-whom (Household or Member), essential split (percentage), source/type for income (T4, T4A, etc.), and optional link to a Subscription.
@@ -263,7 +288,7 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 
 ### Measurable Outcomes
 
-- **SC-001**: A new household can complete sign-up, add both adults plus their kids, and log their first expense in under 5 minutes from first visit.
+- **SC-001**: After admin provisioning of two adult accounts linked to a household, the household can add their kids and log their first expense in under 5 minutes from first sign-in.
 - **SC-002**: Logging a typical expense (amount, category, "for whom", essential split) takes no more than 4 taps after opening the app.
 - **SC-003**: When one adult adds a transaction, the other adult sees it on the dashboard within 5 seconds of opening the app.
 - **SC-004**: The app renders all screens correctly on a 340 px-wide mobile viewport, with zero horizontal scrolling, for households containing between 0 and 8 kids.
@@ -278,8 +303,8 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 - All amounts and budgets are in **CAD**; multi-currency is out of scope for v1.
 - Default province is **Ontario**, configurable in settings; tax behavior swaps automatically for BC/AB/QC where rates and PST/QST handling differ.
 - Each household has exactly **2 adults** and any number of kids; single-parent households can also be supported (income split degenerates to 100% one adult).
-- Authentication is **email + password** (the stakeholder's chosen auth provider is captured in planning, not in this spec); OAuth/social providers are out of scope for v1.
-- Household membership is established via **email invitation**: each adult signs up with their own account and links to the same household through an invite.
+- Authentication is **email + password**, with user accounts (`auth.users` rows) provisioned by an administrator directly in Supabase. The app exposes no signup or public-registration path in v1; OAuth/social providers and self-service signup are out of scope for v1.
+- **Household creation** is user-initiated, in-app, on first sign-in when the user has no membership. The admin creates only the Supabase `auth.users` row — never the household. Subsequent adults are attached in-app via email lookup against `auth.users`; kids are added in-app by name + age. Email-delivered invitations are out of scope for v1.
 - Data is scoped per-household; a member of one household cannot read or write data belonging to another household.
 - "By income" split percentages are **always derived from current logged adult incomes**, never stored as fixed percentages.
 - The app targets mobile PWA first; a 340 px-wide phone viewport is the primary design target (matching the wireframe).
@@ -288,3 +313,4 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 - Kid rewards/chores tracking is **explicitly out of scope** (removed during design iteration in favor of a "compare kids" view).
 - The "tabbed wireframe explorer" UI from the design bundle is for review only — the production app uses normal screen-by-screen mobile navigation with a hamburger drawer.
 - PWA offline behavior queues writes and syncs on reconnect; full conflict resolution beyond last-write-wins is out of scope for v1.
+- Self-serve account / household deletion is **explicitly out of scope for v1**. PIPEDA right-to-erasure requests are handled manually by operations on user request and added to the post-v1 roadmap. The only user-facing deletion action in v1 is per-member soft-delete (FR-007a).
