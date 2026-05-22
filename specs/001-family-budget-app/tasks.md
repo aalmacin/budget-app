@@ -28,16 +28,16 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Add runtime dependencies to `package.json`: `@supabase/supabase-js`, `@supabase/ssr`, `@reduxjs/toolkit`, `react-redux`, `zod`, `recharts`, `date-fns`, `@serwist/next` (note: `date-fns-tz` is NOT needed in v1 — US8 removed)
-- [ ] T002 [P] Add dev dependencies to `package.json`: `vitest`, `@vitest/ui`, `@playwright/test`, `@testing-library/react`, `jsdom`, `supabase` (CLI)
-- [ ] T003 [P] Add npm scripts to `package.json`: `test:unit` (vitest), `test:e2e` (playwright), `typecheck` (tsc --noEmit)
-- [ ] T004 [P] Create `.env.example` documenting `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY` (last is read by migration tooling, never by app code)
-- [ ] T005 [P] Update `.gitignore` to add `.env.local`, `.env*.local`, `playwright-report/`, `test-results/`, `coverage/`
-- [ ] T006 Create directory scaffolding per plan structure: `app/(auth)/`, `app/(app)/`, `components/{ui,layout,transactions,reports,family,budget,quick-add}/`, `lib/{supabase,validators,pwa,formatters}/`, `store/slices/`, `supabase/{migrations,policies,functions}/`, `tests/{e2e,unit}/`
-- [ ] T007 [P] Add `vitest.config.ts` at repo root with jsdom env and path alias matching `tsconfig.json`
-- [ ] T008 [P] Add `playwright.config.ts` at repo root targeting `http://localhost:3023`, `webServer: { command: 'npm run dev', port: 3023 }`, Chromium + WebKit projects, mobile viewport 375x812 default
-- [ ] T009 [P] Tighten `eslint.config.mjs` with `@typescript-eslint/no-explicit-any: 'error'` and ban `@ts-ignore` / `@ts-nocheck`
-- [ ] T010 Initialize Supabase local config at `supabase/config.toml` and create `supabase/migrations/` placeholder
+- [X] T001 Add runtime dependencies to `package.json`: `@supabase/supabase-js`, `@supabase/ssr`, `@reduxjs/toolkit`, `react-redux`, `zod`, `recharts`, `date-fns`, `@serwist/next` (note: `date-fns-tz` is NOT needed in v1 — US8 removed)
+- [X] T002 [P] Add dev dependencies to `package.json`: `vitest`, `@vitest/ui`, `@playwright/test`, `@testing-library/react`, `jsdom`, `supabase` (CLI)
+- [X] T003 [P] Add npm scripts to `package.json`: `test:unit` (vitest), `test:e2e` (playwright), `typecheck` (tsc --noEmit)
+- [X] T004 [P] Create `.env.example` documenting `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY` (last is read by migration tooling, never by app code)
+- [X] T005 [P] Update `.gitignore` to add `.env.local`, `.env*.local`, `playwright-report/`, `test-results/`, `coverage/`
+- [X] T006 Create directory scaffolding per plan structure: `app/(auth)/`, `app/(app)/`, `components/{ui,layout,transactions,reports,family,budget,quick-add}/`, `lib/{supabase,validators,pwa,formatters}/`, `store/slices/`, `supabase/{migrations,policies,functions}/`, `tests/{e2e,unit}/`
+- [X] T007 [P] Add `vitest.config.ts` at repo root with jsdom env and path alias matching `tsconfig.json`
+- [X] T008 [P] Add `playwright.config.ts` at repo root targeting `http://localhost:3023`, `webServer: { command: 'npm run dev', port: 3023 }`, Chromium + WebKit projects, mobile viewport 375x812 default
+- [X] T009 [P] Tighten `eslint.config.mjs` with `@typescript-eslint/no-explicit-any: 'error'` and ban `@ts-ignore` / `@ts-nocheck`
+- [X] T010 Initialize Supabase local config at `supabase/config.toml` and create `supabase/migrations/` placeholder
 
 ---
 
@@ -47,26 +47,26 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T011 Migration `supabase/migrations/0001_init.sql`: enable `pgcrypto`, `citext`, `pg_cron` extensions; create `update_timestamp()` trigger function used by every table; create shared helper `auth_user_household_ids()` returning the set of household ids the calling `auth.uid()` belongs to (active members only, used by every RLS policy)
-- [ ] T012 [P] Supabase server client (App Router-compatible, cookie-aware) in `lib/supabase/server.ts`
-- [ ] T013 [P] Supabase browser client in `lib/supabase/client.ts`
-- [ ] T014 Supabase request middleware (session refresh + per-request CSP nonce) in `lib/supabase/middleware.ts`, wired through `middleware.ts` at repo root
-- [ ] T015 [P] Root layout with `next/font` (Geist + Geist Mono), CSP nonce header, viewport meta `width=device-width,initial-scale=1`, themed `<html>` in `app/layout.tsx`
-- [ ] T016 [P] PWA manifest (name "Budget", short_name "Budget", theme color `#2a3d33` from HIFI palette, 192/512 icons) in `app/manifest.ts`
-- [ ] T017 [P] Serwist service worker entry in `app/sw.ts` (app-shell precache + stale-while-revalidate for static, network-first for routes)
-- [ ] T018 [P] Auth route group layout (minimal shell, no drawer) in `app/(auth)/layout.tsx`
-- [ ] T019 Authenticated route group layout in `app/(app)/layout.tsx`: gates unauthenticated users to `/login`, redirects users with no active `household_member` row to `/onboarding/create-household`, mounts hamburger drawer, opens realtime subscription
-- [ ] T020 [P] Hamburger drawer component in `components/layout/AppDrawer.tsx` (links: Dashboard, Quick Add, Transactions, Budget, Family, Reports, Subscriptions, Add Income, Settings, Sign out — note: NO Taxes link in v1)
-- [ ] T021 [P] Shared UI primitives (Button, IconButton, MenuButton, Input, NumberInput, AmountHero, Chip, ChipsRow, SegControl, Sheet, Modal, Toast, EmptyState, ErrorState, Skeleton, PageTitle, AppBar, FAB) in `components/ui/`
-- [ ] T022 [P] Shared visual primitives derived from `specs/001-family-budget-app/design/project/hifi-shared.jsx`: `FamilyAvatar.tsx`, `MerchantIcon.tsx`, `Bar.tsx`, `SplitBar.tsx`, `Donut.tsx` in `components/ui/`
-- [ ] T023 [P] HIFI design tokens lifted from `specs/001-family-budget-app/design/project/hifi-shared.jsx` to `components/tokens.ts` and wired into Tailwind v4's `@theme` block in `app/globals.css`
-- [ ] T024 [P] Money helpers (cents↔dollars, `formatCAD`, integer math) in `lib/money.ts`
-- [ ] T025 [P] Pure income-split helper mirroring SQL `compute_income_split` + `apply_split_rule` (including the floor + residual-to-higher-earner rule per spec clarification §3) for UI previews in `lib/split.ts`
-- [ ] T026 [P] Base Zod schemas (uuid, money_cents, percent_0_100, cadence_enum, split_rule_enum) in `lib/validators/index.ts`
-- [ ] T027 [P] Redux store skeleton + drawer slice in `store/index.ts` and `store/slices/drawer.ts`; Provider wired in `app/(app)/layout.tsx`
-- [ ] T028 [P] Offline outbox scaffolding (IndexedDB store + enqueue/replay API keyed by client UUID v7) in `lib/pwa/outbox.ts` and `store/slices/outbox.ts`
-- [ ] T029 [P] Realtime channel hook `useHouseholdRealtime(householdId)` in `lib/supabase/realtime.ts` that triggers `revalidateTag('household:<id>')` on incoming INSERT/UPDATE/DELETE on `transaction`
-- [ ] T030 Root index page redirect — signed-in users to `/dashboard`, anonymous to `/login` — in `app/page.tsx`
+- [X] T011 Migration `supabase/migrations/0001_init.sql`: enable `pgcrypto`, `citext`, `pg_cron` extensions; create `update_timestamp()` trigger function used by every table; create shared helper `auth_user_household_ids()` returning the set of household ids the calling `auth.uid()` belongs to (active members only, used by every RLS policy)
+- [X] T012 [P] Supabase server client (App Router-compatible, cookie-aware) in `lib/supabase/server.ts`
+- [X] T013 [P] Supabase browser client in `lib/supabase/client.ts`
+- [X] T014 Supabase request middleware (session refresh + per-request CSP nonce) in `lib/supabase/middleware.ts`, wired through `middleware.ts` at repo root
+- [X] T015 [P] Root layout with `next/font` (Geist + Geist Mono), CSP nonce header, viewport meta `width=device-width,initial-scale=1`, themed `<html>` in `app/layout.tsx`
+- [X] T016 [P] PWA manifest (name "Budget", short_name "Budget", theme color `#2a3d33` from HIFI palette, 192/512 icons) in `app/manifest.ts`
+- [X] T017 [P] Serwist service worker entry in `app/sw.ts` (app-shell precache + stale-while-revalidate for static, network-first for routes)
+- [X] T018 [P] Auth route group layout (minimal shell, no drawer) in `app/(auth)/layout.tsx`
+- [X] T019 Authenticated route group layout in `app/(app)/layout.tsx`: gates unauthenticated users to `/login`, redirects users with no active `household_member` row to `/onboarding/create-household`, mounts hamburger drawer, opens realtime subscription
+- [X] T020 [P] Hamburger drawer component in `components/layout/AppDrawer.tsx` (links: Dashboard, Quick Add, Transactions, Budget, Family, Reports, Subscriptions, Add Income, Settings, Sign out — note: NO Taxes link in v1)
+- [X] T021 [P] Shared UI primitives (Button, IconButton, MenuButton, Input, NumberInput, AmountHero, Chip, ChipsRow, SegControl, Sheet, Modal, Toast, EmptyState, ErrorState, Skeleton, PageTitle, AppBar, FAB) in `components/ui/`
+- [X] T022 [P] Shared visual primitives derived from `specs/001-family-budget-app/design/project/hifi-shared.jsx`: `FamilyAvatar.tsx`, `MerchantIcon.tsx`, `Bar.tsx`, `SplitBar.tsx`, `Donut.tsx` in `components/ui/`
+- [X] T023 [P] HIFI design tokens lifted from `specs/001-family-budget-app/design/project/hifi-shared.jsx` to `components/tokens.ts` and wired into Tailwind v4's `@theme` block in `app/globals.css`
+- [X] T024 [P] Money helpers (cents↔dollars, `formatCAD`, integer math) in `lib/money.ts`
+- [X] T025 [P] Pure income-split helper mirroring SQL `compute_income_split` + `apply_split_rule` (including the floor + residual-to-higher-earner rule per spec clarification §3) for UI previews in `lib/split.ts`
+- [X] T026 [P] Base Zod schemas (uuid, money_cents, percent_0_100, cadence_enum, split_rule_enum) in `lib/validators/index.ts`
+- [X] T027 [P] Redux store skeleton + drawer slice in `store/index.ts` and `store/slices/drawer.ts`; Provider wired in `app/(app)/layout.tsx`
+- [X] T028 [P] Offline outbox scaffolding (IndexedDB store + enqueue/replay API keyed by client UUID v7) in `lib/pwa/outbox.ts` and `store/slices/outbox.ts`
+- [X] T029 [P] Realtime channel hook `useHouseholdRealtime(householdId)` in `lib/supabase/realtime.ts` that triggers `revalidateTag('household:<id>')` on incoming INSERT/UPDATE/DELETE on `transaction`
+- [X] T030 Root index page redirect — signed-in users to `/dashboard`, anonymous to `/login` — in `app/page.tsx`
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 

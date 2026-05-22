@@ -1,0 +1,57 @@
+import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { AppDrawer } from "@/components/layout/AppDrawer";
+import { ReduxProvider } from "@/store/Provider";
+
+/**
+ * Authenticated route-group layout.
+ *
+ * Gate logic:
+ *   1. No session → redirect to /login.
+ *   2. Session but no active `household_member` row → redirect to
+ *      /onboarding/create-household (FR-003).
+ *   3. Otherwise render the app shell (drawer + Redux provider).
+ *
+ * Realtime wiring is done in T060 (US2) once the Realtime channel hook is
+ * actually consumed by transaction-aware screens. The hook is already
+ * available in lib/supabase/realtime.ts.
+ */
+export default async function AppLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Check active membership. If the household_member table doesn't exist yet
+  // (foundation phase before US1 migrations), .from() will surface a PostgREST
+  // error and we treat the user as un-onboarded.
+  const { data: membership, error: membershipError } = await supabase
+    .from("household_member")
+    .select("household_id")
+    .eq("user_id", user.id)
+    .is("deleted_at", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (!membership || membershipError) {
+    redirect("/onboarding/create-household");
+  }
+
+  return (
+    <ReduxProvider>
+      <div className="min-h-svh bg-bg flex flex-col">
+        <main className="flex-1 relative">{children}</main>
+        <AppDrawer />
+      </div>
+    </ReduxProvider>
+  );
+}
