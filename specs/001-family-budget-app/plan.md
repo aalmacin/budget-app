@@ -51,7 +51,7 @@ Technical approach: Next.js 16 App Router (Server Components default; Server Act
 
 ### Post-design re-check (after Phase 1 artifacts)
 
-Re-evaluated after writing `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`, and after the scope-reduction clarifications (US8 removed, kid allowance dropped, Quick Add added, income switched to net):
+Re-evaluated after writing `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`, after the scope-reduction clarifications (US8 removed, kid allowance dropped, Quick Add added, income switched to net), and after the design v2 alignment (friendlier income labels, Subs dual-action, no per-kid budget for v1):
 
 - **I (Code Quality)**: surface shrank — `lib/canadian-tax/`, `lib/validators/tax.ts`, `contracts/tax.md`, the `gst_hst_setaside` ledger, the `deduction` table, and one Playwright spec are all gone. No new patterns introduced by Quick Add: it reuses `log_expense` RPC and existing tiles styling.
 - **II (Security)**: every remaining table in `data-model.md` carries an RLS policy. `list_quick_add_options` is `security invoker` and returns nothing outside the caller's household. Password policy and nonce-CSP unchanged.

@@ -17,9 +17,10 @@
 
 - Args: `{ id?, amount_cents, occurred_on, category_id, notes?, paid_by_member_id, income_source }`
 - `paid_by_member_id` is the earner (must be an active `adult`).
-- `amount_cents` is the **net (post-tax) amount** the user received (spec clarification §6). v1 does NOT trigger any GST/HST set-aside, withholding, or tax-bucket auto-aside. `income_source` is descriptive metadata only.
+- `amount_cents` is the **net (post-tax) amount** the user received (spec clarification §6). v1 does NOT trigger any GST/HST set-aside, withholding, or tax-bucket auto-aside.
+- `income_source` is one of `Salary | Contract | Self_employed | Benefit | Refund | Gift` (spec clarification §9). Descriptive metadata only — no tax behavior is keyed off it. The function validates against this enum.
 - Returns: the resolved id.
-- Errors: same shape as `log_expense`, plus `P0001 "income_source required for income"`.
+- Errors: same shape as `log_expense`, plus `P0001 "income_source required for income"` and `P0001 "Unknown income_source"` if outside the enum.
 
 ## `update_transaction(id uuid, patch)` → `void`
 

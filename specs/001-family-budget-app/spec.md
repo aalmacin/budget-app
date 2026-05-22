@@ -26,6 +26,13 @@ A calm, minimal mobile-first budgeting app for Canadian couples and families (2 
 - Q: Should kid weekly allowances be implemented? → A: No. The hi-fi design's per-kid allowance cards (weekly budget, wallet balance, auto-transfer cadence) are **out of scope for v1**. Kids exist only so expenses can be tagged `for_member_id = <kid>`; per-person reports still attribute spending to the kid, and any "kid budget" desire is met by using categories like "Kids · all" with a monthly limit. Kid wallet balances, allowance schedules, and auto-transfer rules are explicitly deferred.
 - Q: Does v1 ship the wireframe's "Quick add" screen? → A: Yes. The FAB on the dashboard opens **Quick Add** (not the full Add Expense form directly). Quick Add is a tile grid that lets the user re-log a recent transaction or trigger a manual instance of an active subscription with one tap — copying the source's merchant, amount, category, "for whom", "paid by", essential split, and split rule, and setting today's date. From Quick Add, a "+" affordance opens the full Add Expense form for never-before-seen merchants. Add Income remains a separate menu action.
 
+### Session 2026-05-21 (design v2 alignment)
+
+- Q: After the design was updated to match the scope reductions, do any spec details need to follow? → A: Yes, three small refinements:
+  - **Income source labels** switch from CRA-flavored (`T4 employment, T4A · contract, CCB`) to consumer-friendly (`Salary, Contract, Benefit`). Final enum: `Salary | Contract | Self_employed | Benefit | Refund | Gift`. Labels remain descriptive metadata only — no tax behavior is keyed off them.
+  - **Quick Add subscription tile** behavior is dual-action: the primary tap re-logs a manual instance (same as Recent tiles), and a secondary pencil icon on the row opens the edit/pause sheet for that subscription. Primary tap on a Recent tile re-logs and dismisses Quick Add.
+  - **Family screen** shows monthly **spent-per-kid** only (no per-kid budget bar). Per-kid budgeting is post-v1. The hero shows total spent on kids this month; the per-kid cards show spend + most-recent transaction. This avoids introducing a `household_member.monthly_budget_cents` column for v1.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Secure household sign-in and onboarding (Priority: P1)
@@ -59,7 +66,7 @@ Either adult can quickly log an expense (amount, category, notes) or income, and
 **Acceptance Scenarios**:
 
 1. **Given** an empty household, **When** an adult logs an expense of $45.20 in "Groceries", **Then** the dashboard balance decreases by $45.20 and the transaction appears at the top of recent activity.
-2. **Given** an income of $2,400 net logged as "T4 employment" source, **When** the user saves it, **Then** the dashboard balance increases by $2,400 (no automatic tax-bucket deduction) and the income appears in the transactions list.
+2. **Given** an income of $2,400 net logged as "Salary" source, **When** the user saves it, **Then** the dashboard balance increases by $2,400 (no automatic tax-bucket deduction) and the income appears in the transactions list.
 3. **Given** a transaction was logged on Adult A's device, **When** Adult B opens the app, **Then** the same transaction is visible without manual sync.
 4. **Given** a transaction with an incorrect amount, **When** the user edits or deletes it, **Then** balances and lists update accordingly.
 
@@ -76,9 +83,10 @@ Tapping the dashboard FAB opens a Quick Add screen instead of the full Add Expen
 **Acceptance Scenarios**:
 
 1. **Given** at least one prior expense exists, **When** the user opens Quick Add from the dashboard FAB, **Then** the most-recent unique merchants appear as tiles in the "Recent" tab.
-2. **Given** active subscriptions exist, **When** the user opens the "Subs" tab, **Then** each active subscription is shown with its next-renewal date and an action to log a manual instance right now.
-3. **Given** the user taps a Quick Add tile, **When** the action completes, **Then** the dashboard balance reflects the new transaction within 5 s and the user is returned to the dashboard.
-4. **Given** the user taps "+" on Quick Add, **When** the full Add Expense form opens, **Then** all fields are empty (a normal first-time entry).
+2. **Given** active subscriptions exist, **When** the user opens the "Subs" tab, **Then** each active subscription is shown with its next-renewal date and the "who-for" attribution.
+3. **Given** a Recent tile or a Subs row primary-tap, **When** the action completes, **Then** the dashboard balance reflects the new transaction within 5 s and the user is returned to the dashboard.
+4. **Given** the user taps the pencil icon on a Subs row, **When** the action completes, **Then** the subscription's edit sheet opens (no transaction is logged).
+5. **Given** the user taps "+" on Quick Add, **When** the full Add Expense form opens, **Then** all fields are empty (a normal first-time entry).
 
 ---
 
@@ -219,10 +227,10 @@ Users can register recurring expenses (Netflix, Spotify, Rogers, Bell internet, 
 **Money entry**
 
 - **FR-008**: Users MUST be able to log an expense with at minimum: amount, category, date, notes, "paid by" (which adult), "for whom" (household, adult, or kid), and essential/non-essential tag (or a per-transaction essential split percentage).
-- **FR-009**: Users MUST be able to log income with at minimum: a **net (post-tax) amount**, source label (T4 employment, T4A · contract, Self-employed, CCB, Refund, Gift — used as descriptive metadata, NOT to drive any automatic tax or set-aside logic), date, and earner (which adult). v1 MUST NOT compute, withhold, or auto-aside any portion of income for taxes.
+- **FR-009**: Users MUST be able to log income with at minimum: a **net (post-tax) amount**, source label (one of `Salary | Contract | Self-employed | Benefit | Refund | Gift` — used as descriptive metadata, NOT to drive any automatic tax or set-aside logic), date, and earner (which adult). v1 MUST NOT compute, withhold, or auto-aside any portion of income for taxes.
 - **FR-010**: Users MUST be able to edit and delete any transaction they can see.
 - **FR-011**: A single transaction MUST be splittable into an essential portion and a non-essential portion (slider 0–100%) that are stored and reported separately.
-- **FR-011a**: System MUST provide a Quick Add screen reached from the dashboard FAB. Quick Add MUST present the household's most recent expenses and active subscriptions as tiles; tapping a tile MUST log a new expense that copies the source's merchant, amount, category, "for whom", "paid by", essential split, and split rule, and MUST set the new transaction's date to today. Quick Add MUST also expose a "+" affordance that opens the full Add Expense form for new merchants. Add Income remains reachable from the drawer as a separate action.
+- **FR-011a**: System MUST provide a Quick Add screen reached from the dashboard FAB. Quick Add MUST present the household's most recent expenses (as a tile grid) and active subscriptions (as a list); the primary tap on either MUST log a new expense that copies the source's merchant, amount, category, "for whom", "paid by", essential split, and split rule, and MUST set the new transaction's date to today. Subscription rows MUST additionally expose a pencil-icon secondary action that navigates to that subscription's edit sheet. Quick Add MUST also expose a "+" affordance that opens the full Add Expense form for new merchants. Add Income remains reachable from the drawer as a separate action. The filter chips visible in the design (`Recent`, `Subs`, `Per kid`, `Merchants`, `Categories`) are non-normative: only `Recent` and `Subs` are MVP; the other three are post-v1 UI slicings of the same data and MAY be added later without spec change.
 - **FR-012**: Logging income MUST update the derived household income-proportional split percentages.
 
 **Categories, defaults, and split rules**

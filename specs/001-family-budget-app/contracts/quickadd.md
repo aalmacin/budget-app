@@ -31,10 +31,20 @@ Returns a mixed list of the household's most recent unique-merchant expenses and
 
 ## Tile-tap write path (no new RPC)
 
-When the user taps a tile, the client constructs a `log_expense` payload by copying every field from the source option, setting `occurred_on = current_date` and minting a fresh client-side UUID v7 as `id`. For `source = 'subscription'`, the client additionally sets `subscription_id = source_id` and leaves `occurrence_date = null` (so the cron-driven idempotency index on `(subscription_id, occurrence_date)` does not collide when the next scheduled auto-log fires).
+Primary-tap behavior is identical for `source = 'recent'` and `source = 'subscription'`: the client constructs a `log_expense` payload by copying every field from the source option, sets `occurred_on = current_date`, mints a fresh client-side UUID v7 as `id`, and dispatches `log_expense`. For `source = 'subscription'`, the client additionally sets `subscription_id = source_id` and leaves `occurrence_date = null` (so the cron-driven idempotency index on `(subscription_id, occurrence_date)` does not collide when the next scheduled auto-log fires).
 
 - No special server-side handling is required: `log_expense` enforces all the usual RLS and validation rules.
 - The tile-tap path participates in the offline outbox like any other expense write — if the device is offline, the entry queues and replays on reconnect with the same client-generated UUID.
+
+## Subscription row secondary action (edit)
+
+Per spec clarification §9 (design v2 alignment), subscription rows in Quick Add render a **pencil icon** alongside the row. Tapping the pencil does NOT dispatch `log_expense`; instead it navigates client-side to `/subscriptions/<source_id>/edit`, which loads that subscription's edit sheet (powered by existing `update_subscription` / `pause_subscription` / `resume_subscription` RPCs documented in `subscriptions.md`). No Quick-Add-specific RPC is involved.
+
+Recent tiles have no secondary action — primary tap re-logs, full stop.
+
+## Filter chips
+
+The hi-fi design v2 shows five chips on Quick Add — `Recent | Subs | Per kid | Merchants | Categories`. Only `Recent` and `Subs` are MVP and correspond to the two content sections described above. `Per kid / Merchants / Categories` are non-normative client-side slicings of the same `list_quick_add_options` result set (groupings by `for_member_id`, `merchant`, and `category_id` respectively). They MAY be added later without changing the RPC contract or this document.
 
 ## What this contract does NOT need
 

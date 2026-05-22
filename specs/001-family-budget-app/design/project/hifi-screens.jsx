@@ -159,10 +159,10 @@ function ActivityRow({ icon, name, paidBy, forWho, amount, sub, last }) {
 /* -------- DASHBOARD -------- */
 function ScreenDashboard() {
   const KIDS = [
-    { name: 'Sam', age: 14, spent: 18, allow: 20 },
-    { name: 'Mia', age: 11, spent: 11, allow: 15 },
-    { name: 'Jo',  age:  8, spent:  6, allow: 10 },
-    { name: 'Eli', age:  5, spent:  3, allow: 5 },
+    { name: 'Sam', age: 14, spent: 248, last: 'Soccer dues' },
+    { name: 'Mia', age: 11, spent: 312, last: 'Music lesson' },
+    { name: 'Jo',  age:  8, spent: 164, last: 'Haircut' },
+    { name: 'Eli', age:  5, spent: 410, last: 'Daycare' },
   ];
   return (
     <div style={{ ...COMMON_BG, position: 'relative', height: '100%', overflow: 'hidden' }}>
@@ -213,9 +213,9 @@ function ScreenDashboard() {
             </div>
           </div>
           <div style={{ background: HIFI.surface, borderRadius: 18, padding: 14 }}>
-            <div style={{ fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1, textTransform: 'uppercase', color: HIFI.muted }}>Tax bucket</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 500, color: HIFI.ink, marginTop: 4, letterSpacing: -0.5 }}>$2,070</div>
-            <div style={{ fontSize: 9.5, color: HIFI.muted, marginTop: 6, fontFamily: FONT_MONO }}>25% · CRA Q2 in 9d</div>
+            <div style={{ fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1, textTransform: 'uppercase', color: HIFI.muted }}>Saved</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 20, fontWeight: 500, color: HIFI.ink, marginTop: 4, letterSpacing: -0.5 }}>$5,380</div>
+            <div style={{ fontSize: 9.5, color: HIFI.muted, marginTop: 6, fontFamily: FONT_MONO }}>52% of net · this month</div>
           </div>
         </div>
 
@@ -235,7 +235,7 @@ function ScreenDashboard() {
         {/* Kids strip */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 500 }}>Kids · 4</div>
-          <div style={{ fontSize: 11, color: HIFI.muted, fontFamily: FONT_MONO }}>Allowance · Fri</div>
+          <div style={{ fontSize: 11, color: HIFI.muted, fontFamily: FONT_MONO }}>Spent · June</div>
         </div>
         <div style={{
           background: HIFI.surface, borderRadius: 22, padding: '14px 8px', marginBottom: 16,
@@ -246,10 +246,8 @@ function ScreenDashboard() {
               <FamilyAvatar initial={k.name[0]} size={36} tone="sand" />
               <div style={{ fontSize: 11, fontWeight: 500, marginTop: 2 }}>{k.name}</div>
               <div style={{ fontSize: 9, color: HIFI.muted, fontFamily: FONT_MONO }}>age {k.age}</div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: HIFI.ink }}>${k.spent}<span style={{ color: HIFI.faint }}>/{k.allow}</span></div>
-              <div style={{ width: '70%', marginTop: 2 }}>
-                <HFBar value={k.spent / k.allow} h={3} color={HIFI.sage} track={HIFI.surfaceSoft} />
-              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: HIFI.ink, marginTop: 2, fontWeight: 500 }}>${k.spent}</div>
+              <div style={{ fontSize: 9, color: HIFI.muted, marginTop: 1, maxWidth: '90%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{k.last}</div>
             </div>
           ))}
         </div>

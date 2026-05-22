@@ -72,7 +72,7 @@ System-seeded categories live with `household_id = null` and are read-only to ev
 | `monthly_budget_cents` | `bigint` nullable | When set, drives the budget overview |
 | `kind` | `text` not null default `'expense'` | `'expense'` or `'income'` |
 
-**Seed data** (system-global, `household_id = null`): Groceries(80), Utilities(100), Transport(70), Kids(90), Health(100), Subscriptions(40), Eating Out(20), Entertainment(0), Rogers(100), Bell(100), RESP(100), TFSA(100). Income kinds: T4, T4A, Self-employed, CCB, Refund, Gift.
+**Seed data** (system-global, `household_id = null`): Groceries(80), Utilities(100), Transport(70), Kids(90), Health(100), Subscriptions(40), Eating Out(20), Entertainment(0), Rogers(100), Bell(100), RESP(100), TFSA(100). Income source labels live on the `transaction.income_source` column rather than as `category` rows: `Salary | Contract | Self_employed | Benefit | Refund | Gift`.
 
 **RLS**: visible if `household_id is null` OR row's household is one the caller belongs to (active membership).
 
@@ -93,7 +93,7 @@ System-seeded categories live with `household_id = null` and are read-only to ev
 | `for_member_id` | `uuid` nullable FK→`household_member.id` | Null = whole household; else the specific Member. May reference soft-deleted member. |
 | `essential_pct` | `smallint` not null | 0..100 — portion that counts as essential |
 | `split_rule` | `text` nullable | `'adult_a' \| 'adult_b' \| '50_50' \| 'by_income' \| null` (null = unsplit / single-adult household) |
-| `income_source` | `text` nullable | For `type='income'`: `T4 \| T4A \| Self_employed \| CCB \| Refund \| Gift` — **descriptive metadata only.** v1 does NOT drive any tax / GST set-aside / auto-aside logic from this column. `amount_cents` for income is the **net** (post-tax) amount the user received. |
+| `income_source` | `text` nullable | For `type='income'`: `Salary \| Contract \| Self_employed \| Benefit \| Refund \| Gift` — **descriptive metadata only.** v1 does NOT drive any tax / GST set-aside / auto-aside logic from this column. `amount_cents` for income is the **net** (post-tax) amount the user received. Friendlier labels replace the prior CRA-flavored `T4 / T4A / CCB` per spec clarification §9 (design v2 alignment). |
 | `subscription_id` | `uuid` nullable FK→`subscription.id` ON DELETE SET NULL | Set by auto-log OR by Quick Add when the user manually re-runs a subscription tile (in which case `occurrence_date` stays null) |
 | `occurrence_date` | `date` nullable | Set only by the cron-driven `materialize_due_subscriptions`; participates in the unique idempotency index below. Quick-Add manual re-runs leave this null to avoid colliding with a future auto-log on the same date. |
 

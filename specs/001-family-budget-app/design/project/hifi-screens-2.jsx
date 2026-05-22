@@ -21,19 +21,20 @@ function ScreenAddIncome() {
         />
         <div style={{ padding: '0 18px' }}>
           <div style={{ textAlign: 'center', padding: '10px 0 18px' }}>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase', color: HIFI.muted }}>Gross amount</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase', color: HIFI.muted }}>Net amount</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, justifyContent: 'center', marginTop: 8 }}>
               <span style={{ fontFamily: FONT_MONO, fontSize: 14, color: HIFI.muted, marginBottom: 14 }}>$</span>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 56, fontWeight: 500, letterSpacing: -2.5, lineHeight: 1, color: HIFI.ink }}>5,800</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 56, fontWeight: 500, letterSpacing: -2.5, lineHeight: 1, color: HIFI.ink }}>4,350</span>
               <span style={{ fontFamily: FONT_MONO, fontSize: 28, color: HIFI.faint, lineHeight: 1, alignSelf: 'baseline' }}>.00</span>
             </div>
+            <div style={{ fontSize: 11, color: HIFI.muted, marginTop: 8, fontFamily: FONT_MONO }}>after tax · take-home</div>
           </div>
 
           <div style={{ background: HIFI.surface, borderRadius: 18, padding: 16, marginBottom: 12 }}>
             <div style={{ fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1, textTransform: 'uppercase', color: HIFI.muted, marginBottom: 4 }}>Source</div>
             <div style={{ fontSize: 15, color: HIFI.ink, paddingBottom: 12, borderBottom: `1px solid ${HIFI.line}` }}>Acme Corp · payroll</div>
             <div style={{ fontSize: 10, fontFamily: FONT_MONO, letterSpacing: 1, textTransform: 'uppercase', color: HIFI.muted, margin: '14px 0 8px' }}>Type</div>
-            <ChipsRow items={['T4 employment', 'T4A · contract', 'Self-employed', 'CCB', 'Refund', 'Gift']} selected="T4 employment" />
+            <ChipsRow items={['Salary', 'Contract', 'Self-employed', 'Benefit', 'Refund', 'Gift']} selected="Salary" />
           </div>
 
           <div style={{ background: HIFI.surface, borderRadius: 18, padding: 16, marginBottom: 12 }}>
@@ -58,7 +59,7 @@ function ScreenAddIncome() {
             </div>
           </div>
 
-          {/* Tax bucket auto-aside */}
+          {/* Income split impact */}
           <div style={{
             background: HIFI.sage, color: '#fff',
             borderRadius: 18, padding: 16, marginBottom: 12,
@@ -71,17 +72,19 @@ function ScreenAddIncome() {
             <div style={{ position: 'relative' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontFamily: FONT_MONO, letterSpacing: 1, textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>
-                  Tax bucket · auto
+                  Updates household split
                 </div>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>25%</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>auto</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 24, fontWeight: 500, letterSpacing: -0.5 }}>$1,450</span>
-                <span style={{ fontSize: 11, opacity: 0.7 }}>moves to Wealthsimple Cash</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 12 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 500, letterSpacing: -0.5 }}>Alex 70%</span>
+                <span style={{ fontSize: 13, opacity: 0.65 }}>· Bea 30%</span>
               </div>
-              <HFBar value={0.25} h={4} color={HIFI.sand} track="rgba(255,255,255,0.15)" />
+              <div style={{ height: 5, display: 'flex', borderRadius: 999, overflow: 'hidden', background: 'rgba(255,255,255,0.18)' }}>
+                <div style={{ width: '70%', background: HIFI.sand }} />
+              </div>
               <div style={{ fontSize: 10.5, opacity: 0.75, marginTop: 10 }}>
-                Logging this paycheque updates the household income-based split.
+                Logging this paycheque updates the income-based split used to share household bills.
               </div>
             </div>
           </div>
@@ -111,8 +114,8 @@ function ScreenAddIncome() {
   );
 }
 
-/* -------- TAXES -------- */
-function ScreenTaxes() {
+/* -------- TAXES (removed — feature deprecated) -------- */
+function _ScreenTaxesDeprecated() {
   const QUARTERS = [
     { q: 'Q1', d: 'Mar 15', v: 3200, status: 'paid' },
     { q: 'Q2', d: 'Jun 15', v: 3200, status: 'due in 9d' },
@@ -363,12 +366,13 @@ function ScreenReports() {
 /* -------- FAMILY -------- */
 function ScreenFamily() {
   const KIDS = [
-    { name: 'Sam', age: 14, allow: 20, balance: 64.50, spent: 12 },
-    { name: 'Mia', age: 11, allow: 15, balance: 38.20, spent:  8 },
-    { name: 'Jo',  age:  8, allow: 10, balance: 22.00, spent:  5 },
-    { name: 'Eli', age:  5, allow:  5, balance:  9.50, spent:  2 },
+    { name: 'Sam', age: 14, spent: 248, budget: 300, top: 'Soccer · $45',     last: 'Sat',  icon: 'receipt' },
+    { name: 'Mia', age: 11, spent: 312, budget: 320, top: 'Kumon · $160',     last: 'Mon',  icon: 'music' },
+    { name: 'Jo',  age:  8, spent: 164, budget: 220, top: 'Haircut · $24',    last: 'Thu',  icon: 'receipt' },
+    { name: 'Eli', age:  5, spent: 410, budget: 560, top: 'Daycare · $72',    last: 'Today',icon: 'baby' },
   ];
-  const totalAllow = KIDS.reduce((s, k) => s + k.allow, 0);
+  const totalSpent = KIDS.reduce((s, k) => s + k.spent, 0);
+  const totalBudget = KIDS.reduce((s, k) => s + k.budget, 0);
   return (
     <div style={SCREEN_SHELL}>
       <ScrollArea>
@@ -378,55 +382,72 @@ function ScreenFamily() {
           right={<IconBtn icon={Icon.plus(18)} />}
         />
         <div style={{ padding: '0 16px' }}>
-          {/* Allowance hero */}
+          {/* Spent-on-kids hero */}
           <div style={{
             background: HIFI.sage, color: '#fff',
-            borderRadius: 24, padding: 18, marginBottom: 14,
+            borderRadius: 24, padding: 20, marginBottom: 14,
             position: 'relative', overflow: 'hidden',
           }}>
             <div style={{
-              position: 'absolute', top: -40, right: -40, width: 160, height: 160,
-              borderRadius: '50%', background: HIFI.sageMid, opacity: 0.4,
+              position: 'absolute', top: -50, right: -40, width: 180, height: 180,
+              borderRadius: '50%', background: HIFI.sageMid, opacity: 0.35,
             }} />
             <div style={{ position: 'relative' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
                 <div style={{ fontSize: 11, fontFamily: FONT_MONO, letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)' }}>
-                  Weekly allowance · 4 kids
+                  Spent on kids · June
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: FONT_MONO }}>Fri · 2d</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: FONT_MONO }}>4 kids</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 38, fontWeight: 500, letterSpacing: -1.2, lineHeight: 1 }}>${totalAllow}</span>
-                <span style={{ fontSize: 12, opacity: 0.7 }}>/ week · auto-transfers</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 12 }}>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 42, fontWeight: 500, letterSpacing: -1.5, lineHeight: 1 }}>${totalSpent.toLocaleString()}</span>
+                <span style={{ fontSize: 13, opacity: 0.7 }}>of ${totalBudget.toLocaleString()} planned</span>
               </div>
-              <div style={{ fontSize: 10.5, opacity: 0.75 }}>from RBC Joint chequing → kids' wallets</div>
+              <HFBar value={totalSpent / totalBudget} h={5} color={HIFI.sand} track="rgba(255,255,255,0.18)" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, opacity: 0.72 }}>
+                <span>{Math.round((totalSpent / totalBudget) * 100)}% used</span>
+                <span>${(totalBudget - totalSpent).toLocaleString()} left</span>
+              </div>
             </div>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ marginBottom: 12 }}>
+            <SegControl options={['All', 'This week', 'June', 'YTD']} value="June" />
           </div>
 
           {/* Per-kid cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 120 }}>
-            {KIDS.map(k => (
-              <div key={k.name} style={{
-                background: HIFI.surface, borderRadius: 20, padding: 14,
-                display: 'flex', alignItems: 'center', gap: 14,
-              }}>
-                <FamilyAvatar initial={k.name[0]} size={48} tone="sand" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                    <div style={{ fontSize: 15, fontWeight: 500 }}>{k.name}</div>
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 14, color: HIFI.ink, fontWeight: 500 }}>${k.balance.toFixed(2)}</div>
+            {KIDS.map(k => {
+              const p = k.spent / k.budget;
+              return (
+                <div key={k.name} style={{
+                  background: HIFI.surface, borderRadius: 20, padding: 14,
+                  display: 'flex', alignItems: 'center', gap: 14,
+                }}>
+                  <FamilyAvatar initial={k.name[0]} size={48} tone="sand" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: 15, fontWeight: 500 }}>{k.name}<span style={{ fontSize: 10.5, color: HIFI.muted, fontFamily: FONT_MONO, marginLeft: 8 }}>AGE {k.age}</span></div>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 14, color: HIFI.ink, fontWeight: 500 }}>
+                        ${k.spent}<span style={{ color: HIFI.faint }}> / ${k.budget}</span>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <HFBar value={p} h={4} color={HIFI.sage} track={HIFI.surfaceSoft} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 }}>
+                      <div style={{ fontSize: 10.5, color: HIFI.muted, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ color: HIFI.sage }}>●</span>
+                        <span>Top: {k.top}</span>
+                      </div>
+                      <div style={{ fontSize: 10.5, color: HIFI.muted, fontFamily: FONT_MONO }}>{k.last.toUpperCase()}</div>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 2 }}>
-                    <div style={{ fontSize: 10.5, color: HIFI.muted, fontFamily: FONT_MONO }}>AGE {k.age} · ${k.allow}/WK</div>
-                    <div style={{ fontSize: 10.5, color: HIFI.muted, fontFamily: FONT_MONO }}>${k.spent} THIS WK</div>
-                  </div>
-                  <div style={{ marginTop: 8 }}>
-                    <HFBar value={k.spent / k.allow} h={4} color={HIFI.sage} track={HIFI.surfaceSoft} />
-                  </div>
+                  <span style={{ color: HIFI.faint }}>{Icon.chevRight(14)}</span>
                 </div>
-                <span style={{ color: HIFI.faint }}>{Icon.chevRight(14)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </ScrollArea>
@@ -436,7 +457,7 @@ function ScreenFamily() {
 
 /* -------- SETTINGS / HOUSEHOLD -------- */
 function ScreenSettings() {
-  const KIDS = [['Sam', 14, 20], ['Mia', 11, 15], ['Jo', 8, 10], ['Eli', 5, 5]];
+  const KIDS = [['Sam', 14, 248], ['Mia', 11, 312], ['Jo', 8, 164], ['Eli', 5, 410]];
   return (
     <div style={SCREEN_SHELL}>
       <ScrollArea>
@@ -475,12 +496,12 @@ function ScreenSettings() {
             background: HIFI.surface, borderRadius: 22, padding: 14, marginBottom: 14,
             display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6,
           }}>
-            {KIDS.map(([n, age, wk]) => (
+            {KIDS.map(([n, age, spent]) => (
               <div key={n} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '6px 2px' }}>
                 <FamilyAvatar initial={n[0]} size={40} tone="sand" />
                 <div style={{ fontSize: 12, fontWeight: 500, marginTop: 2 }}>{n}</div>
                 <div style={{ fontSize: 9.5, color: HIFI.muted, fontFamily: FONT_MONO }}>age {age}</div>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: HIFI.ink }}>${wk}/wk</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: HIFI.ink }}>${spent}/mo</div>
               </div>
             ))}
           </div>
@@ -561,7 +582,6 @@ function ScreenSettings() {
               ['Auto-categorize',  'on'],
               ['Essential rule',   'Groceries · 80% default'],
               ['Currency',         'CAD'],
-              ['Tax profile',      'Sole prop · ON · 31%'],
             ].map(([n, v], i, a) => (
               <div key={n} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -575,6 +595,161 @@ function ScreenSettings() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+/* -------- QUICK ADD -------- */
+function ScreenQuickAdd() {
+  const RECENTS = [
+    { name: 'Music lesson',    sub: 'Mia · weekly',      amt: 32.00,  icon: 'music',   accent: true,  kid: 'M' },
+    { name: 'Diapers · pack',  sub: 'Eli · 1–2 wk',      amt: 28.40,  icon: 'baby',                   kid: 'E' },
+    { name: 'Daycare',         sub: 'Eli · M–F',         amt: 72.00,  icon: 'baby',                   kid: 'E' },
+    { name: 'Soccer · Sam',    sub: 'Kids · monthly',    amt: 45.00,  icon: 'receipt',                kid: 'S' },
+    { name: 'Kids haircut',    sub: 'Jo · 6wk',          amt: 24.00,  icon: 'receipt',                kid: 'J' },
+    { name: 'Whole Foods',     sub: 'Groceries · split', amt: 142.30, icon: 'cart' },
+  ];
+  const SUBS = [
+    { n: 'Rogers · mobile', v: 95.00,  d: 'Jun 24', who: 'Household', tone: 'sage' },
+    { n: 'Bell · internet', v: 89.99,  d: 'Jul 02', who: 'Household', tone: 'sage' },
+    { n: 'Netflix',         v: 18.99,  d: 'Jul 04', who: 'Household', tone: 'sand' },
+    { n: 'Spotify Family',  v: 17.99,  d: 'Jul 08', who: 'Household', tone: 'sand' },
+    { n: 'Roblox · Sam',    v: 11.99,  d: 'Jul 04', who: 'Sam',       tone: 'sand', kid: 'S' },
+    { n: 'Kumon · Mia',     v: 160.00, d: 'Jul 11', who: 'Mia',       tone: 'sage', kid: 'M' },
+  ];
+  const subsTotal = SUBS.reduce((s, x) => s + x.v, 0);
+
+  return (
+    <div style={SCREEN_SHELL}>
+      <ScrollArea top={54}>
+        <AppBar
+          left={<button style={{ width: 38, height: 38, borderRadius: 12, border: 'none', background: 'transparent', color: HIFI.ink, fontFamily: FONT_MONO, fontSize: 16 }}>✕</button>}
+          center={<div style={{ fontSize: 14, fontWeight: 500 }}>Quick add</div>}
+          right={<IconBtn icon={Icon.plus(18)} />}
+        />
+
+        <div style={{ padding: '0 16px' }}>
+          {/* Filter chips */}
+          <div style={{ marginBottom: 14 }}>
+            <ChipsRow items={['Recent', 'Subs', 'Per kid', 'Merchants', 'Categories']} selected="Recent" />
+          </div>
+
+          {/* Tap to log again */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px', marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>Tap to log again</div>
+            <div style={{ fontSize: 11, color: HIFI.muted, fontFamily: FONT_MONO }}>6 RECENTS</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
+            {RECENTS.map((r, i) => {
+              const filled = r.accent;
+              const cardBg = filled ? HIFI.sage : HIFI.surface;
+              const fg = filled ? '#fff' : HIFI.ink;
+              const subFg = filled ? 'rgba(255,255,255,0.7)' : HIFI.muted;
+              return (
+                <button key={i} style={{
+                  background: cardBg, color: fg, border: 'none', textAlign: 'left',
+                  borderRadius: 18, padding: 14,
+                  display: 'flex', flexDirection: 'column', gap: 8, minHeight: 116,
+                  boxShadow: filled ? '0 6px 18px -8px rgba(42,61,51,0.4)' : '0 1px 0 rgba(0,0,0,0.04)',
+                  cursor: 'pointer',
+                  position: 'relative', overflow: 'hidden',
+                }}>
+                  {filled && (
+                    <div style={{
+                      position: 'absolute', top: -30, right: -30, width: 90, height: 90,
+                      borderRadius: '50%', background: HIFI.sageMid, opacity: 0.4,
+                    }} />
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+                    <div style={{
+                      width: 30, height: 30, borderRadius: 9,
+                      background: filled ? 'rgba(255,255,255,0.16)' : HIFI.surfaceSoft,
+                      color: filled ? '#fff' : HIFI.ink2,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{Icon[r.icon] ? Icon[r.icon](16) : Icon.receipt(16)}</div>
+                    {r.kid && <FamilyAvatar initial={r.kid} size={20} tone={filled ? 'paper' : 'sand'} />}
+                  </div>
+                  <div style={{ position: 'relative', marginTop: 'auto' }}>
+                    <div style={{ fontSize: 9.5, fontFamily: FONT_MONO, letterSpacing: 0.8, textTransform: 'uppercase', color: subFg, marginBottom: 3 }}>{r.sub}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>{r.name}</div>
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 500, letterSpacing: -0.3 }}>
+                      ${r.amt.toFixed(2)}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Subscriptions header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 4px', marginBottom: 8 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>Subscriptions</div>
+              <div style={{ fontSize: 10.5, color: HIFI.muted, marginTop: 2 }}>Auto-log monthly · tap to edit</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 14, fontWeight: 500, letterSpacing: -0.3 }}>${subsTotal.toFixed(2)}</div>
+              <div style={{ fontSize: 10, color: HIFI.muted, fontFamily: FONT_MONO, letterSpacing: 0.5 }}>/MO · {SUBS.length}</div>
+            </div>
+          </div>
+
+          {/* Subs list */}
+          <div style={{ background: HIFI.surface, borderRadius: 22, padding: 4, marginBottom: 14 }}>
+            {SUBS.map((s, i) => (
+              <div key={s.n} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '13px 14px',
+                borderBottom: i < SUBS.length - 1 ? `1px solid ${HIFI.line}` : 'none',
+              }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 10,
+                  background: s.tone === 'sage' ? 'rgba(42,61,51,0.08)' : 'rgba(200,168,122,0.18)',
+                  color: s.tone === 'sage' ? HIFI.sage : HIFI.ink2,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: FONT_MONO, fontSize: 12, fontWeight: 600,
+                }}>{s.n.split(' ')[0].slice(0, 2).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: HIFI.ink, fontWeight: 500 }}>{s.n}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                    <span style={{ fontSize: 10.5, color: HIFI.muted, fontFamily: FONT_MONO }}>RENEWS {s.d.toUpperCase()}</span>
+                    <span style={{ fontSize: 10.5, color: HIFI.faint }}>·</span>
+                    {s.kid
+                      ? <><FamilyAvatar initial={s.kid} size={13} tone="sand" /><span style={{ fontSize: 10.5, color: HIFI.muted }}>{s.who}</span></>
+                      : <span style={{ fontSize: 10.5, color: HIFI.muted }}>{s.who}</span>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 13, fontWeight: 500 }}>${s.v.toFixed(2)}</div>
+                  <button style={{
+                    width: 26, height: 26, borderRadius: 8, border: 'none',
+                    background: HIFI.surfaceSoft, color: HIFI.ink2,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: FONT_MONO, fontSize: 12, cursor: 'pointer',
+                  }}>✎</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sub-savings callout */}
+          <div style={{
+            background: HIFI.sandSoft, border: `1px solid ${HIFI.sandLight}`,
+            borderRadius: 18, padding: '14px 16px', marginBottom: 120,
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8, background: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: HIFI.sage, flexShrink: 0,
+            }}>{Icon.bell(16)}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: HIFI.ink }}>Bundle Netflix + Disney+</div>
+              <div style={{ fontSize: 11, color: HIFI.muted, marginTop: 2 }}>Save ~$8/mo on annual plans</div>
+            </div>
+            <span style={{ color: HIFI.faint }}>{Icon.chevRight(14)}</span>
           </div>
         </div>
       </ScrollArea>
@@ -667,5 +842,5 @@ function ScreenLogin() {
 }
 
 Object.assign(window, {
-  ScreenAddIncome, ScreenTaxes, ScreenReports, ScreenFamily, ScreenSettings, ScreenLogin,
+  ScreenAddIncome, ScreenReports, ScreenFamily, ScreenSettings, ScreenLogin, ScreenQuickAdd,
 });
