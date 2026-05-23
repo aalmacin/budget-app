@@ -4,17 +4,16 @@
 **Date**: 2026-05-22
 **Audience**: a developer cloning this repo for the first time after this feature ships.
 
-Goal — measured by SC-004 — is to reach a successful sign-in in **under 15 minutes**, including the one-time administrator step.
+Goal — measured by SC-004 — is to reach a successful sign-in in **under 15 minutes**, including booting the local Supabase stack and creating your first user.
 
 ---
 
 ## Prerequisites
 
 - Node 20+ and `npm` (already implied by Next.js 16).
-- Access to the shared Supabase project (URL + anon key). Request these from the project administrator.
-- An administrator who can create a user for you in the Supabase dashboard.
+- Docker (or OrbStack) running locally — the Supabase CLI needs it to boot a local stack.
 
-You do **not** need the Supabase service-role key for normal development.
+This feature targets **local Supabase only**. A dedicated cloud Supabase project for the Budget app will be added in a later feature (see `research.md` R9). You do **not** need cloud credentials, an admin in a cloud dashboard, or a service-role key.
 
 ---
 
@@ -28,27 +27,29 @@ You do **not** need the Supabase service-role key for normal development.
    npm install
    ```
 
-2. **Get an account from the administrator** (≈ 1 min):
+2. **Boot the local Supabase stack and apply migrations** (≈ 3 min on first run):
 
-   - Ask the administrator to create a user for you in the Supabase dashboard (Authentication → Users → Add user, with "Auto-confirm user" enabled).
-   - You will receive an email + password pair via your team's secure channel.
+   ```sh
+   npx supabase start          # boots Postgres + GoTrue + PostgREST in Docker
+   npm run supabase:reset      # applies all four migrations + runs the RLS test
+   ```
 
-3. **Configure environment variables** (≈ 2 min):
+   `supabase start` prints the local URLs and the anon key — copy them; you'll need them in the next step. The default URL is `http://127.0.0.1:54321`.
+
+3. **Create a test user in the local stack** (≈ 1 min):
+
+   - Open Supabase Studio at `http://127.0.0.1:54323`.
+   - Authentication → Users → Add user → enable "Auto-confirm user".
+   - Note the email and password you set; you'll use them to sign in.
+
+4. **Configure environment variables** (≈ 2 min):
 
    - Copy the example file: `cp .env.local.example .env.local`
    - Fill in:
-     - `NEXT_PUBLIC_SUPABASE_URL` — provided by the administrator.
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — provided by the administrator.
+     - `NEXT_PUBLIC_SUPABASE_URL` — the local API URL printed by `supabase start` (`http://127.0.0.1:54321`).
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the anon key printed by `supabase start`.
+     - `E2E_USER_A_EMAIL`, `E2E_USER_A_PASSWORD` — credentials of the user you created in step 3. Add a second user (`B`) too if you plan to run the multi-tab tests.
    - Do not commit `.env.local`. It is already in `.gitignore`.
-
-4. **(Optional) Apply migrations to a local Supabase** (≈ 5 min, only for offline work):
-
-   ```sh
-   npx supabase start          # boots local Supabase
-   npx supabase db reset       # applies migrations + runs the RLS test migration
-   ```
-
-   For most contributors, point `NEXT_PUBLIC_SUPABASE_URL` at the shared cloud instance and skip this step.
 
 ---
 
@@ -70,7 +71,7 @@ These map 1-to-1 to the spec's User Stories:
 
 1. Visit `http://localhost:3023/`.
 2. You are redirected to `/login`.
-3. Submit the email and password the administrator gave you.
+3. Submit the email and password of the user you created in Studio.
 4. You land on the authenticated home page, which greets you with your email.
 5. Refresh the page — you stay signed in.
 
@@ -121,11 +122,11 @@ This runs the Playwright auth suite. It requires:
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Redirected to `/login` immediately after a successful sign-in | Cookies not being set — middleware misconfigured for your environment | Confirm `middleware.ts` is in repo root, not under `app/`. Check `cookies()` is awaited. |
+| Redirected to `/login` immediately after a successful sign-in | Cookies not being set — middleware misconfigured for your environment | Confirm `proxy.ts` is in repo root, not under `app/`. Check `cookies()` is awaited. |
 | `relation "budget.categories" does not exist` | Schema not exposed via PostgREST | Confirm `supabase/config.toml` lists `budget` under `[api].schemas` and that migrations have run. |
 | `permission denied for schema budget` | Missing `GRANT USAGE` | Re-run migrations; the first migration (`*_budget_schema.sql`) grants `USAGE` to `anon, authenticated`. |
 | Sign-in works but the header is blank | `getCurrentUser()` returned null in the layout | Check that the server Supabase client uses `cookies()` from `next/headers`, not a cached client. |
-| CSP errors in the browser console | Inline script/style without the request nonce | Confirm `middleware.ts` emits the CSP header and that the layout reads the nonce from headers. |
+| CSP errors in the browser console | Inline script/style without the request nonce | Confirm `proxy.ts` emits the CSP header and that the layout reads the nonce from headers. |
 
 ---
 
@@ -133,4 +134,4 @@ This runs the Playwright auth suite. It requires:
 
 - Creating categories or transactions through the UI — no UI ships for them in this feature (clarified in Q4).
 - Password reset, MFA, social sign-in — out of scope (clarified in Assumptions).
-- Provisioning the Supabase project itself — out of scope; an administrator owns the cloud project.
+- Cloud deployment — out of scope for this feature. A dedicated paid Supabase project for the Budget app will be added in a later feature (see `research.md` R9).

@@ -1,7 +1,9 @@
 -- Create the dedicated schema for this app.
--- The Supabase instance is shared with other applications (project memory: see
--- specs/001-setup-supabase/spec.md FR-013). All tables, functions, and policies
--- for the Budget app live under `budget` and never leak into `public`.
+-- The Budget app currently runs against a local Supabase stack only; a
+-- dedicated paid cloud Supabase project is a later feature (see
+-- specs/001-setup-supabase/research.md § R9). All tables, functions, and
+-- policies for this app live under `budget` so the same migrations apply
+-- unchanged when the dedicated cloud project arrives.
 
 CREATE SCHEMA IF NOT EXISTS budget;
 

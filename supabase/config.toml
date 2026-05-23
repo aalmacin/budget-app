@@ -7,9 +7,9 @@ project_id = "budget"
 enabled = true
 port = 54321
 # Expose only the budget schema for this app; graphql_public is the Supabase default
-# for GraphiQL and is kept to avoid breaking dashboard tooling. The shared `public`
-# schema is intentionally NOT exposed here — it belongs to a sibling app on the
-# same instance (per project memory).
+# for GraphiQL and is kept to avoid breaking dashboard tooling. The default `public`
+# schema is intentionally NOT exposed here — this app's tables live in `budget`
+# (FR-013) and keeping `public` off the API surface prevents accidental leakage.
 schemas = ["budget", "graphql_public"]
 extra_search_path = ["budget", "public", "extensions"]
 max_rows = 1000
@@ -35,8 +35,11 @@ enabled = true
 schema_paths = []
 
 [db.seed]
-enabled = true
-sql_paths = ["./seed.sql"]
+# No seed data ships with this feature. Categories and transactions are created
+# at runtime by signed-in users. Re-enable and add paths if/when later features
+# need deterministic fixtures.
+enabled = false
+sql_paths = []
 
 [db.network_restrictions]
 enabled = false

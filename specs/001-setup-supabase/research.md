@@ -13,7 +13,7 @@ This document captures the "how" decisions for the items the spec deliberately l
 
 - `lib/supabase/client.ts` exports `createSupabaseBrowserClient()` (used in `"use client"` modules only)
 - `lib/supabase/server.ts` exports an `async createSupabaseServerClient()` that reads cookies from `next/headers` (used in Server Components, Server Actions, and Route Handlers)
-- `middleware.ts` constructs its own server client per request, bound to `NextRequest.cookies` so it can refresh the session before downstream handlers see it
+- `proxy.ts` constructs its own server client per request, bound to `NextRequest.cookies` so it can refresh the session before downstream handlers see it
 
 **Rationale**: `@supabase/ssr` exists precisely to handle the cookie-store wiring across Next.js's three rendering contexts (client, RSC, middleware). The reference project at `~/Projects/daily-learning-worktree/fix-account-access/` already operates this pattern successfully against a current Next.js. Using one library across all surfaces avoids cookie drift between contexts.
 
@@ -30,16 +30,16 @@ This document captures the "how" decisions for the items the spec deliberately l
 
 **Decision**:
 
-1. The Supabase project has the `budget` schema (per project memory). Migrations in this feature start with `CREATE SCHEMA IF NOT EXISTS budget;` (idempotent guard) and grant `USAGE` to `authenticated` and `anon`.
+1. Migrations start with `CREATE SCHEMA IF NOT EXISTS budget;` (idempotent guard) and grant `USAGE` to `authenticated` and `anon`.
 2. Local `supabase/config.toml`'s `[api]` section sets `schemas = ["budget", "graphql_public"]` and `extra_search_path = ["budget", "public", "extensions"]`.
 3. The browser/server Supabase clients are constructed with `db: { schema: 'budget' }` so `supabase.from('categories')` resolves to `budget.categories` without per-call schema prefixes.
 
-**Rationale**: Project memory records that this Supabase instance is shared with another app and this app's tables must live in `budget`. PostgREST only exposes schemas listed in `[api].schemas`, so the `budget` schema needs explicit inclusion. Setting the client default schema keeps call sites clean and avoids accidental writes to `public`.
+**Rationale**: Even though the Budget app currently runs only against a local Supabase stack (see R9), keeping the dedicated `budget` schema convention now means the same migrations and clients will Just Work when the app moves to its dedicated cloud Supabase project later, without rewrites. PostgREST only exposes schemas listed in `[api].schemas`, so the `budget` schema needs explicit inclusion. Setting the client default schema keeps call sites clean and avoids accidental writes to `public`.
 
 **Alternatives considered**:
 
-- Put all tables in `public` schema (matching the reference project) — rejected: violates FR-013 and the project-level "shared DB" constraint.
-- Keep `public` in the `[api].schemas` array — rejected: would re-expose other apps' tables on this instance via PostgREST.
+- Put all tables in `public` schema — rejected: violates FR-013 and forfeits the per-app namespace, making future co-tenancy harder.
+- Keep `public` in the `[api].schemas` array — rejected: would expose unrelated tables if the local stack accumulates them.
 
 **Constitution interaction**: When the first feature exposes a Category or Transaction RPC (Principle III), that function will be defined as `budget.<fn_name>` and called via `supabase.rpc('fn_name')` — with the default schema set to `budget`, no prefix is needed.
 
@@ -47,7 +47,7 @@ This document captures the "how" decisions for the items the spec deliberately l
 
 ## R3. Authentication gating: middleware vs. per-page
 
-**Decision**: A single `middleware.ts` at the repo root does two things on every request:
+**Decision**: A single `proxy.ts` at the repo root does two things on every request:
 
 1. **Session refresh**: calls `supabase.auth.getUser()` to surface the current user and write any refreshed session cookies into the response (this is the canonical `@supabase/ssr` pattern — removing it silently breaks SSR auth).
 2. **Auth gate**: if there is no user **and** the path is not in the public allow-list (`/login`, static assets), redirect to `/login`.
@@ -65,7 +65,7 @@ The `app/(authed)/layout.tsx` route group then performs a second `getCurrentUser
 
 ## R4. Nonce-based CSP (constitutional requirement, new vs. reference)
 
-**Decision**: Generate a per-request nonce in `middleware.ts` using the Web Crypto API (`crypto.randomUUID()`), attach it as a request header so Server Components can read it via `headers()`, and emit a `Content-Security-Policy` response header that whitelists that nonce for `script-src` and `style-src`. Root `app/layout.tsx` reads the nonce and applies it to any inline `<script>` or `<style>` the framework can't otherwise nonce.
+**Decision**: Generate a per-request nonce in `proxy.ts` using the Web Crypto API (`crypto.randomUUID()`), attach it as a request header so Server Components can read it via `headers()`, and emit a `Content-Security-Policy` response header that whitelists that nonce for `script-src` and `style-src`. Root `app/layout.tsx` reads the nonce and applies it to any inline `<script>` or `<style>` the framework can't otherwise nonce.
 
 **Rationale**: Constitution Principle II requires nonce-based CSP for inline scripts/styles. The reference project does not implement this — it's a new constitutional requirement this feature pays the upfront cost for so later features inherit it. Next.js 16's recommended pattern is exactly this: middleware-generated nonce, propagated via headers, applied by the framework.
 
@@ -75,6 +75,14 @@ The `app/(authed)/layout.tsx` route group then performs a second `getCurrentUser
 - Skip CSP entirely until needed — rejected: deferring security baseline foundations is exactly the regression Principle II is meant to prevent.
 
 **Open implementation detail (resolved during build, not blocking)**: Next.js 16's exact API for injecting a nonce into framework-emitted inline scripts may be `unstable_*` or a setting under `experimental` in `next.config.ts`. The implementer must consult `node_modules/next/dist/docs/` (per `AGENTS.md`) before wiring this and document the version-specific API used.
+
+**Resolved during implementation — `style-src 'unsafe-inline'` fallback**: The shipped `proxy.ts` emits `style-src 'self' 'nonce-<n>' 'unsafe-inline'`. This is intentional and **not** a relaxation of Principle II:
+
+- CSP Level 3 specifies that when a nonce or hash is present in `style-src`, browsers MUST ignore `'unsafe-inline'`. Modern browsers (Chrome 59+, Firefox 58+, Safari 15.4+) follow this; the policy is therefore effectively nonce-only for them.
+- `'unsafe-inline'` remains as a graceful fallback for older browsers that don't understand the nonce token. We accept this trade-off because the alternative is breaking the app entirely on those browsers; the constitution allows fallbacks documented in the plan.
+- `script-src` does **not** include `'unsafe-inline'` — the script policy is strict-nonce only.
+
+The same pattern is widely used in production Next.js apps and is the recommendation in the Next.js security docs for projects that depend on framework-managed inline styles.
 
 ---
 
@@ -137,6 +145,24 @@ Categories and Transactions tables are created in this feature but **no client U
 **Rationale**: Adding RPCs now without a caller would be premature abstraction; deferring them to the first caller keeps the surface honest.
 
 ---
+
+## R9. Hosting model: local-only for now, dedicated cloud project later
+
+**Decision**: The Budget app develops and tests against a **local Supabase stack** per developer (`npx supabase start` boots an isolated Docker stack on a per-project basis — no conflict with any other app's local stack). There is **no shared cloud Supabase project** for the Budget app at this time. A dedicated paid Supabase project will be provisioned in a later feature; that future feature will introduce `supabase db push` to the dedicated cloud project as the deployment path. Until then, "cloud" deployment is out of scope.
+
+**Rationale**: The original spec recorded a "shared cloud instance with another app" assumption inherited from project memory. During post-implementation review, we recognised that Supabase CLI manages migrations through a single project-global tracking table (`supabase_migrations.schema_migrations`); two CLI-owning repos pushing to the same Supabase project would fight over that table and produce exactly the "only one migrations table" symptom the user observed. Moving to a dedicated cloud project per app sidesteps the issue entirely and matches how Supabase itself recommends multi-app setups. Local stacks are unaffected because each project's `supabase start` produces its own isolated Docker stack on a per-project port range.
+
+**Alternatives considered**:
+
+- **Manual SQL application against the shared cloud project** (admin pastes SQL into Studio) — rejected: works but is brittle long-term and doesn't track applied state.
+- **Switch this app to dbmate/sqitch with a per-app tracking table** — rejected for now: introduces a second migration tool when local-only operation needs zero extra tooling; revisit if cloud deployment lands without a dedicated project.
+- **Spin up a separate Supabase cloud project today** — deferred: the user has chosen to pay for it later; not blocking development of this feature.
+
+**Implications recorded in spec/quickstart**:
+
+- FR-013's "shared instance" wording was retracted; the `budget` schema convention stays as forward-compatible hygiene.
+- Quickstart and README emphasise local Supabase as the only currently supported path.
+- The `NEXT_PUBLIC_SUPABASE_URL` developers use is the local URL `http://127.0.0.1:54321` (printed by `supabase start`), not a cloud URL.
 
 ## Open items deferred to /speckit-tasks or implementation
 

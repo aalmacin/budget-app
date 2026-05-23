@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add Supabase as the auth and database layer for the Budget app, scoped to the `budget` schema on a shared Postgres instance. Ship: email+password sign-in, server-side session refresh in middleware, an authenticated app shell (header showing email + sign-out), placeholder authenticated home, and `Category`/`Transaction` tables with RLS enforcing per-user isolation. Accounts are created out-of-band by an administrator via the Supabase dashboard; no signup, no MFA, no UI for Category/Transaction CRUD in this feature.
+Add Supabase as the auth and database layer for the Budget app, scoped to the `budget` schema on a **local Supabase stack** (see research.md § R9). Ship: email+password sign-in, server-side session refresh in middleware, an authenticated app shell (header showing email + sign-out), placeholder authenticated home, and `Category`/`Transaction` tables with RLS enforcing per-user isolation. Accounts are created out-of-band in Supabase Studio (locally; in Studio dashboard for the future cloud project); no signup, no MFA, no UI for Category/Transaction CRUD in this feature. Cloud deployment to a dedicated paid Supabase project is a later feature.
 
 Technical approach: `@supabase/ssr` for browser + server clients; Next.js App Router with a root middleware that refreshes the session and gates protected routes; Server Actions for sign-in/sign-out (auth-provider calls, exempt from the RPC rule per Principle III); migrations under `supabase/migrations/` with schema `budget` and policies built on `auth.uid()`; Playwright as the critical-path test runner for the auth flow.
 
@@ -13,7 +13,7 @@ Technical approach: `@supabase/ssr` for browser + server clients; Next.js App Ro
 
 **Language/Version**: TypeScript 5 (strict, no `any`)
 **Primary Dependencies**: Next.js 16.2.6 (App Router), React 19.2.4, `@supabase/ssr` ~0.10, `@supabase/supabase-js` ~2.x, `supabase` CLI (devDep), `@playwright/test` (devDep)
-**Storage**: Supabase Postgres — all app tables, functions, policies live in schema `budget` on a Supabase instance shared with another app (per project memory)
+**Storage**: Supabase Postgres — all app tables, functions, policies live in schema `budget`. Local Supabase only for now (see research.md § R9); cloud deployment to a dedicated paid Supabase project is a later feature.
 **Testing**: Playwright for the critical auth flow (US1, US3 acceptance scenarios); SQL-level assertions in a migration test file for RLS isolation (US2)
 **Target Platform**: Web (Node 20+ runtime), modern browsers
 **Project Type**: Web app — single Next.js project (no separate frontend/backend split)
@@ -68,14 +68,19 @@ specs/001-setup-supabase/
 
 ```text
 app/
-├── layout.tsx                       # Existing root layout (CSP nonce + fonts)
+├── layout.tsx                       # UPDATED: root layout applies CSP nonce + Geist fonts
 ├── globals.css                      # Existing
-├── page.tsx                         # REPLACED: redirects to /(authed) home or /login
 ├── login/
 │   └── page.tsx                     # NEW: sign-in page (Server Component)
 └── (authed)/
     ├── layout.tsx                   # NEW: app shell — header w/ email + sign-out
-    └── page.tsx                     # NEW: placeholder authenticated home
+    ├── error.tsx                    # NEW: route-level error boundary (Principle V)
+    ├── loading.tsx                  # NEW: route-level loading skeleton (Principle V)
+    └── page.tsx                     # NEW: authenticated home page (greets the user)
+
+# Note: the starter `app/page.tsx` is DELETED. The route group `(authed)`
+# serves `/` via `app/(authed)/page.tsx`; the middleware + the layout guard
+# handle authentication before that page renders.
 
 actions/
 └── auth.ts                          # NEW: signIn, signOut Server Actions
@@ -88,9 +93,12 @@ lib/
 
 components/
 ├── AppHeader.tsx                    # NEW: Server Component — shell header
-└── SignOutButton.tsx                # NEW: "use client" — invokes signOut action
+├── SignOutButton.tsx                # NEW: "use client" — wraps Button
+└── ui/
+    ├── Button.tsx                   # NEW: shared primitive (primary/secondary variants)
+    └── TextInput.tsx                # NEW: shared primitive (labeled input)
 
-middleware.ts                        # NEW: session refresh + auth gate + CSP nonce
+proxy.ts                             # NEW: Next.js 16 proxy (formerly "middleware") — session refresh + auth gate + CSP nonce
 
 supabase/
 ├── config.toml                      # NEW: local CLI config, schemas = ["budget", "graphql_public"]
@@ -103,8 +111,13 @@ supabase/
 
 tests/
 └── e2e/
-    ├── auth.spec.ts                 # NEW: Playwright critical-path auth tests
-    └── fixtures.ts                  # NEW: test-user helpers (read creds from env)
+    ├── anonymous/
+    │   └── auth.spec.ts             # NEW: anonymous-storage critical-path auth tests
+    ├── authed/
+    │   ├── already-signed-in.spec.ts  # NEW: revisit /login while signed in
+    │   └── sign-out.spec.ts         # NEW: US3 acceptance + multi-tab edge case
+    ├── fixtures.ts                  # NEW: test-user helpers (read creds from env)
+    └── global-setup.ts              # NEW: pre-signs-in User A and writes storage state
 
 playwright.config.ts                 # NEW
 
