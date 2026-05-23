@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppDrawer } from "@/components/layout/AppDrawer";
+import { OnlineReplayMounter } from "@/components/layout/OnlineReplayMounter";
 import { ReduxProvider } from "@/store/Provider";
 
 /**
@@ -51,6 +52,7 @@ export default async function AppLayout({
       <div className="min-h-svh bg-bg flex flex-col">
         <main className="flex-1 relative">{children}</main>
         <AppDrawer />
+        <OnlineReplayMounter />
       </div>
     </ReduxProvider>
   );

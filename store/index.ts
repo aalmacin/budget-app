@@ -9,11 +9,13 @@ import {
 } from "react-redux";
 import { drawerReducer } from "@/store/slices/drawer";
 import { outboxReducer } from "@/store/slices/outbox";
+import { filtersReducer } from "@/store/slices/filters";
 
 export const store = configureStore({
   reducer: {
     drawer: drawerReducer,
     outbox: outboxReducer,
+    filters: filtersReducer,
   },
   devTools: process.env.NODE_ENV !== "production",
 });
