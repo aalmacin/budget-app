@@ -3,24 +3,45 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3023",
-    "build": "next build",
+    "dev": "next dev --webpack -p 3023",
+    "build": "next build --webpack",
     "start": "next start -p 3023",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.3.0",
+    "@serwist/next": "^9.0.11",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "date-fns": "^4.1.0",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-redux": "^9.1.2",
+    "recharts": "^2.13.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^16.0.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/ui": "^4.1.7",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "jsdom": "^25.0.1",
+    "supabase": "^2.101.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
+  },
+  "overrides": {
+    "postcss": "^8.5.10"
   }
 }
