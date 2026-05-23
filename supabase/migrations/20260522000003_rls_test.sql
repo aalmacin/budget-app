@@ -13,8 +13,12 @@ DECLARE
   cross_user_attempt_rows INT;
   cross_user_category_blocked BOOLEAN := FALSE;
 BEGIN
+  -- Open the savepoint FIRST so the auth.users seeds also roll back on the way out.
+  -- Otherwise the synthetic users persist across db resets (G2).
+  SAVEPOINT rls_test;
+
   -- Seed two synthetic users in auth.users so the FKs from budget.categories
-  -- and budget.transactions resolve. Use ON CONFLICT in case the test re-runs.
+  -- and budget.transactions resolve.
   INSERT INTO auth.users (
     id, instance_id, aud, role, email, encrypted_password,
     email_confirmed_at, created_at, updated_at,
@@ -23,11 +27,7 @@ BEGIN
     (user_a, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
      'rls-test-a@example.invalid', '', now(), now(), now(), '{}'::jsonb, '{}'::jsonb, false),
     (user_b, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'rls-test-b@example.invalid', '', now(), now(), now(), '{}'::jsonb, '{}'::jsonb, false)
-  ON CONFLICT (id) DO NOTHING;
-
-  -- Wrap the rest in a savepoint so we roll back the test data on the way out.
-  SAVEPOINT rls_test;
+     'rls-test-b@example.invalid', '', now(), now(), now(), '{}'::jsonb, '{}'::jsonb, false);
 
   ---------------------------------------------------------------------------
   -- Step 1: insert one category and one transaction as each user.

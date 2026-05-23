@@ -109,7 +109,9 @@ No JSON API surface is exposed by this feature.
 
 ---
 
-## Middleware Contract — `middleware.ts`
+## Proxy Contract — `proxy.ts`
+
+(Renamed from "Middleware" to align with the Next.js 16 file-convention rename. Same behavior.)
 
 | Aspect | Behavior |
 |---|---|
@@ -132,3 +134,13 @@ No JSON API surface is exposed by this feature.
 | Empty email or password | Client-side `required` attribute prevents submission; `signIn` also rejects empty values defensively. |
 
 These match the Edge Cases section of `spec.md`.
+
+---
+
+## Test layout (implementation note)
+
+The Playwright project config splits tests by storage state. Specs are placed accordingly:
+
+- `tests/e2e/anonymous/auth.spec.ts` — runs without a session cookie (US1 sign-in flow + empty-form edge case + post-sign-in persistence).
+- `tests/e2e/authed/already-signed-in.spec.ts` — runs with User A's storage state (US1 edge case: revisit /login while signed in).
+- `tests/e2e/authed/sign-out.spec.ts` — runs with User A's storage state (US3 sign-out flow + multi-tab edge case).

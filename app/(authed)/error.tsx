@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Button } from '@/components/ui/Button';
 
 export default function AuthedError({
   error,
@@ -23,13 +24,14 @@ export default function AuthedError({
         We couldn&apos;t load this page. Try again, or sign out and back in if the
         problem persists.
       </p>
-      <button
+      <Button
         type="button"
+        variant="primary"
+        className="mt-6"
         onClick={() => reset()}
-        className="mt-6 rounded-md bg-zinc-900 dark:bg-zinc-50 px-4 py-2 text-sm font-medium text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-200 transition-colors"
       >
         Try again
-      </button>
+      </Button>
     </section>
   );
 }

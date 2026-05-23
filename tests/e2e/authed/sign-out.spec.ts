@@ -23,41 +23,33 @@ test.describe('US3 — sign out and shell', () => {
       page.waitForURL((url) => url.pathname === '/login'),
       page.getByRole('button', { name: 'Sign out' }).click(),
     ]);
-    // Try to revisit the protected home.
     await page.goto('/');
     await expect(page).toHaveURL(/\/login$/);
   });
 });
 
 test.describe('US3 edge case — multi-tab sign-out propagates', () => {
-  test('sign out in one tab causes the next request from another to redirect', async ({ browser }, testInfo) => {
-    const storageState = testInfo.project.use.storageState;
-    if (typeof storageState !== 'string') {
-      test.skip(true, 'requires a storageState file path from the authed project');
-      return;
-    }
-    const ctx1 = await browser.newContext({ storageState });
-    const ctx2 = await browser.newContext({ storageState });
-    const page1 = await ctx1.newPage();
-    const page2 = await ctx2.newPage();
+  // Two pages in the same browser context share a cookie store, which mirrors
+  // multiple tabs of the same browser profile. Signing out in page1 must cause
+  // page2's next protected request to redirect.
+  test('signing out in tab A redirects tab B on next request', async ({ context, page }) => {
+    const page1 = page;
+    const page2 = await context.newPage();
 
     await page1.goto('/');
     await page2.goto('/');
+    await expect(page1).toHaveURL('/');
+    await expect(page2).toHaveURL('/');
 
     await Promise.all([
       page1.waitForURL((url) => url.pathname === '/login'),
       page1.getByRole('button', { name: 'Sign out' }).click(),
     ]);
 
-    // ctx2's cookies are independent (different browser context = different
-    // browser profile). Within a single browser profile (separate tabs), the
-    // cookie store IS shared and the next request would redirect. Verify by
-    // copying ctx1's now-cleared cookies into ctx2 and re-visiting.
-    await ctx2.clearCookies();
-    await page2.goto('/');
+    // Tab B is still on the protected page; its next request must redirect.
+    await page2.reload();
     await expect(page2).toHaveURL(/\/login$/);
 
-    await ctx1.close();
-    await ctx2.close();
+    await page2.close();
   });
 });
