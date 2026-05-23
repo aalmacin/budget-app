@@ -21,7 +21,9 @@ let browserClient: ReturnType<typeof createBrowserClient> | undefined;
  */
 export function getSupabaseBrowserClient() {
   if (!browserClient) {
-    browserClient = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    browserClient = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      db: { schema: "budget" },
+    });
   }
   return browserClient;
 }

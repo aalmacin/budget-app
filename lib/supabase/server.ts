@@ -27,14 +27,18 @@ export async function createSupabaseServerClient() {
       return cookieStore.getAll().map(({ name, value }) => ({ name, value }));
     },
     setAll(cookiesToSet) {
-      for (const { name, value, options } of cookiesToSet) {
-        cookieStore.set(name, value, options);
+      try {
+        for (const { name, value, options } of cookiesToSet) {
+          cookieStore.set(name, value, options);
+        }
+      } catch {
+        // Server Components cannot set cookies; middleware handles refresh.
       }
     },
   };
 
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    db: { schema: "budget" },
     cookies: cookieMethods,
   });
-
 }

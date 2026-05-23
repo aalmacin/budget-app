@@ -10,13 +10,14 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "supabase:reset": "supabase db reset"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.3.0",
     "@serwist/next": "^9.0.11",
-    "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/ssr": "^0.10.0",
+    "@supabase/supabase-js": "^2.101.1",
     "date-fns": "^4.1.0",
     "next": "16.2.6",
     "react": "19.2.4",
@@ -26,7 +27,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0",
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.0.1",
     "@types/node": "^20",
