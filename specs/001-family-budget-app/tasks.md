@@ -80,25 +80,25 @@ Single Next.js app at repository root: `app/`, `components/`, `lib/`, `store/`, 
 
 ### Tests for User Story 1
 
-- [ ] T031 [P] [US1] Playwright sign-in + onboarding flow (admin-created user → first sign-in → routed to onboarding → create household → dashboard) in `tests/e2e/signin-onboarding.spec.ts`
-- [ ] T032 [P] [US1] Playwright existing-member sign-in (user with active membership → direct to dashboard) in `tests/e2e/signin-existing-member.spec.ts`
-- [ ] T033 [P] [US1] Playwright add-adult-by-email flow (success, `no_account` error, idempotent re-add as `already_member`, 2-adult cap rejection) in `tests/e2e/add-adult-by-email.spec.ts`
-- [ ] T034 [P] [US1] Playwright soft-delete-member flow (remove member → hidden from family/chips/selectors → historical reports still attribute prior spend) in `tests/e2e/soft-delete-member.spec.ts`
+- [X] T031 [P] [US1] Playwright sign-in + onboarding flow (admin-created user → first sign-in → routed to onboarding → create household → dashboard) in `tests/e2e/signin-onboarding.spec.ts`
+- [X] T032 [P] [US1] Playwright existing-member sign-in (user with active membership → direct to dashboard) in `tests/e2e/signin-existing-member.spec.ts`
+- [X] T033 [P] [US1] Playwright add-adult-by-email flow (success, `no_account` error, idempotent re-add as `already_member`, 2-adult cap rejection) in `tests/e2e/add-adult-by-email.spec.ts`
+- [X] T034 [P] [US1] Playwright soft-delete-member flow (remove member → hidden from family/chips/selectors → historical reports still attribute prior spend) in `tests/e2e/soft-delete-member.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T035 [US1] Migration `supabase/migrations/0002_household.sql`: `household` (no `province`/`tax_profile`/`gst_hst_registrant`), `household_member` (incl. `deleted_at`); RLS enabled; `<table>_household_isolation` policies filtering on `deleted_at IS NULL`; trigger `enforce_adult_cap` counting only active adults; unique partial index `(household_id, user_id) where user_id is not null`
-- [ ] T036 [P] [US1] SQL function `create_household(name)` (`security definer`, pinned `search_path`) — inserts `household` + caller's `household_member` row in one tx — in `supabase/functions/create_household.sql`
-- [ ] T037 [P] [US1] SQL function `add_adult_by_email(email)` (`security definer`) returning `record { status, member_id }` with statuses `inserted | already_member | self_member` and `P0001` errors for `no_account` / `cap_reached` — in `supabase/functions/add_adult_by_email.sql`
-- [ ] T038 [P] [US1] SQL function `add_kid(display_name, age_years)` (`security invoker`, validates 0..25) in `supabase/functions/add_kid.sql`
-- [ ] T039 [P] [US1] SQL function `soft_delete_member(member_id)` (idempotent, rejects self-delete when only active adult) in `supabase/functions/soft_delete_member.sql`
-- [ ] T040 [P] [US1] SQL function `update_member_income(member_id, monthly_income_cents)` rejecting kids and soft-deleted members in `supabase/functions/update_member_income.sql`
-- [ ] T041 [P] [US1] SQL function `update_household(patch)` (name only in v1; province/tax_profile fields don't exist) in `supabase/functions/update_household.sql`
-- [ ] T042 [P] [US1] Zod schemas for sign-in (incl. password policy ≥8 + ≥1 digit + ≥1 symbol per FR-001a) and household/member inputs in `lib/validators/auth.ts` and `lib/validators/household.ts`
-- [ ] T042a [US1] Configure Supabase Auth project-level password policy to enforce FR-001a (min length 8, ≥1 digit, ≥1 symbol, max length ≥64, paste allowed). Follow the manual steps already documented in `quickstart.md` §3 and verify in the Supabase dashboard → Authentication → Providers → Email. This is the server-side backstop for the Zod client-side rule in T042; without it admin-set / admin-reset passwords could bypass FR-001a.
-- [ ] T043 [P] [US1] Login page + server action (`supabase.auth.signInWithPassword`) with generic `Invalid login credentials` error (no enumeration) in `app/(auth)/login/page.tsx`
-- [ ] T044 [P] [US1] Onboarding "Create your household" page + server action calling `rpc('create_household', { name })` in `app/(auth)/onboarding/create-household/page.tsx`
-- [ ] T045 [US1] Sign-out server action and drawer affordance in `app/(app)/_actions/signout.ts` (consumed by `AppDrawer`)
+- [X] T035 [US1] Migration `supabase/migrations/0002_household.sql`: `household` (no `province`/`tax_profile`/`gst_hst_registrant`), `household_member` (incl. `deleted_at`); RLS enabled; `<table>_household_isolation` policies filtering on `deleted_at IS NULL`; trigger `enforce_adult_cap` counting only active adults; unique partial index `(household_id, user_id) where user_id is not null`
+- [X] T036 [P] [US1] SQL function `create_household(name)` (`security definer`, pinned `search_path`) — inserts `household` + caller's `household_member` row in one tx — in `supabase/functions/create_household.sql`
+- [X] T037 [P] [US1] SQL function `add_adult_by_email(email)` (`security definer`) returning `record { status, member_id }` with statuses `inserted | already_member | self_member` and `P0001` errors for `no_account` / `cap_reached` — in `supabase/functions/add_adult_by_email.sql`
+- [X] T038 [P] [US1] SQL function `add_kid(display_name, age_years)` (`security invoker`, validates 0..25) in `supabase/functions/add_kid.sql`
+- [X] T039 [P] [US1] SQL function `soft_delete_member(member_id)` (idempotent, rejects self-delete when only active adult) in `supabase/functions/soft_delete_member.sql`
+- [X] T040 [P] [US1] SQL function `update_member_income(member_id, monthly_income_cents)` rejecting kids and soft-deleted members in `supabase/functions/update_member_income.sql`
+- [X] T041 [P] [US1] SQL function `update_household(patch)` (name only in v1; province/tax_profile fields don't exist) in `supabase/functions/update_household.sql`
+- [X] T042 [P] [US1] Zod schemas for sign-in (incl. password policy ≥8 + ≥1 digit + ≥1 symbol per FR-001a) and household/member inputs in `lib/validators/auth.ts` and `lib/validators/household.ts`
+- [ ] T042a [US1] Configure Supabase Auth project-level password policy to enforce FR-001a (min length 8, ≥1 digit, ≥1 symbol, max length ≥64, paste allowed). Follow the manual steps already documented in `quickstart.md` §3 and verify in the Supabase dashboard → Authentication → Providers → Email. This is the server-side backstop for the Zod client-side rule in T042; without it admin-set / admin-reset passwords could bypass FR-001a. *(Manual operator step — pending user action in Supabase dashboard.)*
+- [X] T043 [P] [US1] Login page + server action (`supabase.auth.signInWithPassword`) with generic `Invalid login credentials` error (no enumeration) in `app/(auth)/login/page.tsx`
+- [X] T044 [P] [US1] Onboarding "Create your household" page + server action calling `rpc('create_household', { name })` in `app/(auth)/onboarding/create-household/page.tsx`
+- [X] T045 [US1] Sign-out server action and drawer affordance in `app/(app)/_actions/signout.ts` (consumed by `AppDrawer`)
 
 **Checkpoint**: US1 fully functional — sign-in, onboarding, add-adult-by-email, add-kid, soft-delete all work end-to-end.
 

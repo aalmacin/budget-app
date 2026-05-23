@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type {
+  RealtimePostgresChangesPayload,
+  RealtimeChannel,
+} from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
@@ -34,11 +37,11 @@ export function useHouseholdRealtime(
           table: "transaction",
           filter: `household_id=eq.${householdId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           onChange({
             type: payload.eventType,
-            new: payload.new,
-            old: payload.old,
+            new: "new" in payload ? (payload.new as Record<string, unknown>) : null,
+            old: "old" in payload ? (payload.old as Record<string, unknown>) : null,
           });
         },
       )

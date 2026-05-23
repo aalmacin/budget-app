@@ -28,7 +28,11 @@ $$;
 --
 -- Marked `stable` because it's deterministic within a single statement and
 -- safe to memoize per-statement.
+--
+-- household_member is created in 0002; defer body check so this migration is
+-- applicable on a fresh database without forward-reference errors.
 -- ---------------------------------------------------------------------------
+set local check_function_bodies = off;
 create or replace function public.auth_user_household_ids()
 returns setof uuid
 language sql
@@ -41,6 +45,7 @@ as $$
   where hm.user_id = auth.uid()
     and hm.deleted_at is null;
 $$;
+set local check_function_bodies = on;
 
 comment on function public.auth_user_household_ids() is
   'Returns the household_ids the current auth user actively belongs to. Used by RLS policies.';

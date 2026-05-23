@@ -7,6 +7,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/icons";
 import { drawerActions } from "@/store/slices/drawer";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { signOutAction } from "@/app/(app)/_actions/signout";
 
 type DrawerLink = {
   href: string;
@@ -104,7 +105,7 @@ export function AppDrawer() {
             );
           })}
         </ul>
-        <form action="/api/auth/signout" method="post" className="px-3 py-3 border-t border-line">
+        <form action={signOutAction} className="px-3 py-3 border-t border-line">
           <button
             type="submit"
             className="w-full text-left px-3 py-2.5 rounded-xl text-sm text-ink-2 hover:bg-surface-soft"
