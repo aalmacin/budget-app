@@ -11,7 +11,9 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "supabase:reset": "supabase db reset"
+    "supabase:reset": "supabase db reset",
+    "db:start": "npx supabase start",
+    "db:reset": "npx supabase db reset"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.3.0",

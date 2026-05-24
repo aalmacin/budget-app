@@ -164,6 +164,28 @@ Categories and Transactions tables are created in this feature but **no client U
 - Quickstart and README emphasise local Supabase as the only currently supported path.
 - The `NEXT_PUBLIC_SUPABASE_URL` developers use is the local URL `http://127.0.0.1:54321` (printed by `supabase start`), not a cloud URL.
 
+## R10. Grant lockdown for Principle III enforcement (post-implementation addendum)
+
+**Decision**: Revoke all direct table grants from `authenticated` and `anon` on `budget.categories` and `budget.transactions`. Enable `FORCE ROW LEVEL SECURITY` on both tables and re-scope the per-table policies from `TO authenticated` to `TO public`. Implemented in migration `20260522000005_lockdown_budget_grants.sql`; verified by `20260522000006_rls_post_lockdown_test.sql`.
+
+**Rationale**: R8 ("no RPC functions in this feature") and the plan's Principle III note both promised that "the first feature that exposes Category or Transaction CRUD must introduce Postgres functions". With direct grants in place, that promise was a convention enforced by code review — a developer could ship `supabase.from('categories').select()` and bypass it. Revoking the grants makes Principle III non-bypassable at the database layer: any direct table access from the client raises `42501 insufficient_privilege`. The only path that works is `supabase.rpc('<name>')` against a SECURITY DEFINER function we explicitly grant `EXECUTE` to.
+
+The `TO public` policy + `FORCE ROW LEVEL SECURITY` combination is what makes the SECURITY DEFINER pattern safe. SECURITY DEFINER functions run as their definer (typically `postgres`). Without FORCE RLS, the table owner bypasses RLS entirely — so an RPC would see all rows for all users. With FORCE RLS, RLS applies to `postgres` too. Without `TO public`, the policy `TO authenticated` doesn't apply to `postgres` — so RLS denies all rows by default. Both knobs must move together, which is why one migration does both.
+
+This change also closes Supabase Advisor lints `pg_graphql_authenticated_table_exposed` for `budget.categories` and `budget.transactions`. With no SELECT grant to `authenticated`, pg_graphql no longer introspects the tables into the signed-in-user GraphQL schema.
+
+**Alternatives considered**:
+
+- **Leave grants in place; rely on code review and Constitution Principle III** — rejected: convention without enforcement decays. The lockdown costs one migration and one verification migration to make the rule physical.
+- **Use a separate `app_internal` role for the SECURITY DEFINER owner** — deferred: would require provisioning a new role and granting it SELECT/INSERT/etc. on `budget.*`. The current `postgres`-as-definer + FORCE RLS approach achieves the same isolation without a new role to manage.
+- **Disable pg_graphql entirely for `budget` schema** — rejected: would also affect future features that might want GraphQL introspection of safe views. The grant lockdown is the more targeted fix.
+
+**Forward implication for the next feature**: every Category/Transaction RPC must be `LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''` with `GRANT EXECUTE ON FUNCTION budget.<name>(...) TO authenticated;`. The RPC body schema-qualifies every table reference (`budget.categories`, not `categories`) since `search_path = ''` disables the default search path.
+
+**Validation gap acknowledged**: An earlier draft of `20260522000006_rls_post_lockdown_test.sql` tried to validate the SECURITY DEFINER + FORCE RLS + `TO public` combination by creating a test helper inside the migration. It failed on first run with `SECURITY DEFINER helper returned 2 categories for user A (expected 1)`. The cause is a hard PostgreSQL rule: **superusers always bypass RLS, regardless of `FORCE ROW LEVEL SECURITY`**. Any function defined in a migration is owned by the migration role (`postgres`, a superuser) and therefore returns unfiltered rows — not because the policy or FORCE RLS is wrong, but because the definer is privileged. The production-correct pattern is to own the function with a non-superuser role that has explicit table grants (the standard Supabase pattern; e.g., create `budget_function_owner NOLOGIN`, grant it SELECT/INSERT/etc. on `budget.*`, and `ALTER FUNCTION ... OWNER TO budget_function_owner`). Introducing that role here would add scope without exercising any real call path, so the first CRUD feature owns both the role provisioning AND the RPC-pattern test. This migration now verifies only the lockdown property (direct DML from `authenticated` is rejected with `42501`); the RPC pattern is validated when there's a real RPC to test it with.
+
+---
+
 ## Open items deferred to /speckit-tasks or implementation
 
 These are not unresolved clarifications — they are routine implementer questions that don't need a spec-level decision:

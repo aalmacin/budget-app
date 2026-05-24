@@ -40,8 +40,9 @@ A user-owned classification used to group transactions.
 **RLS**
 
 - `ALTER TABLE budget.categories ENABLE ROW LEVEL SECURITY;`
-- Policy `categories_owner FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);` — FR-010
-- Grant `SELECT, INSERT, UPDATE, DELETE` to `authenticated`. No grants to `anon`.
+- `ALTER TABLE budget.categories FORCE ROW LEVEL SECURITY;` — applies RLS to the table owner too, so SECURITY DEFINER RPCs (running as `postgres`) are still filtered.
+- Policy `categories_owner FOR ALL TO public USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);` — FR-010. `TO public` (not `TO authenticated`) so the policy applies even when the SECURITY DEFINER RPC runs as `postgres`.
+- **No direct grants** to `authenticated` or `anon` — see migration `20260522000005_lockdown_budget_grants.sql`. All CRUD must go through SECURITY DEFINER RPCs (Principle III). Closes Supabase Advisor lint `pg_graphql_authenticated_table_exposed`.
 
 ---
 
@@ -81,8 +82,9 @@ This guard is in addition to RLS, not a replacement: RLS would already block sel
 **RLS**
 
 - `ALTER TABLE budget.transactions ENABLE ROW LEVEL SECURITY;`
-- Policy `transactions_owner FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);` — FR-010
-- Grant `SELECT, INSERT, UPDATE, DELETE` to `authenticated`. No grants to `anon`.
+- `ALTER TABLE budget.transactions FORCE ROW LEVEL SECURITY;` — applies RLS to the table owner too.
+- Policy `transactions_owner FOR ALL TO public USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);` — FR-010.
+- **No direct grants** to `authenticated` or `anon` — see migration `20260522000005_lockdown_budget_grants.sql`. All CRUD must go through SECURITY DEFINER RPCs (Principle III).
 
 ---
 

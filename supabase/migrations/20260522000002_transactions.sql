@@ -23,6 +23,7 @@ CREATE INDEX transactions_category_id_idx
 CREATE FUNCTION budget.assert_transaction_category_owner()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SET search_path = ''
 AS $$
 DECLARE
   category_owner UUID;

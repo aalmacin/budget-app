@@ -30,15 +30,15 @@ This feature targets **local Supabase only**. A dedicated cloud Supabase project
 2. **Boot the local Supabase stack and apply migrations** (≈ 3 min on first run):
 
    ```sh
-   npx supabase start          # boots Postgres + GoTrue + PostgREST in Docker
-   npm run supabase:reset      # applies all four migrations + runs the RLS test
+   npm run db:start    # boots Postgres + GoTrue + PostgREST + Studio in Docker
+   npm run db:reset    # applies all four migrations + runs the RLS test
    ```
 
-   `supabase start` prints the local URLs and the anon key — copy them; you'll need them in the next step. The default URL is `http://127.0.0.1:54321`.
+   `db:start` prints the local URLs and the anon key — copy them; you'll need them in the next step. The default URL is `http://127.0.0.1:54321`. It also brings up the **Supabase Studio web console** at `http://127.0.0.1:54323` (see step 3).
 
 3. **Create a test user in the local stack** (≈ 1 min):
 
-   - Open Supabase Studio at `http://127.0.0.1:54323`.
+   - Open Supabase Studio at `http://127.0.0.1:54323`. (Studio is the local web console that ships with `npm run db:start` — use it for all admin tasks: creating users, browsing the `budget` schema, running ad-hoc SQL.)
    - Authentication → Users → Add user → enable "Auto-confirm user".
    - Note the email and password you set; you'll use them to sign in.
 

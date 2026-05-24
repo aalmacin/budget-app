@@ -17,11 +17,11 @@ You need Node 20+, npm, and Docker (or OrbStack) running.
 2. **Boot the local Supabase stack and apply migrations**
 
    ```sh
-   npx supabase start       # boots Postgres + GoTrue + PostgREST in Docker
-   npm run supabase:reset   # applies all migrations + the RLS self-check
+   npm run db:start    # boots Postgres + GoTrue + PostgREST + Studio in Docker
+   npm run db:reset    # applies all migrations + the RLS self-check
    ```
 
-   `supabase start` prints the local API URL (default `http://127.0.0.1:54321`) and the anon key — you'll paste them into `.env.local`.
+   `db:start` prints the local API URL (default `http://127.0.0.1:54321`) and the anon key — you'll paste them into `.env.local`. It also boots the Studio web console (see below).
 
 3. **Create a test user in the local stack**
 
@@ -49,10 +49,21 @@ npm run dev
 
 Open `http://localhost:3023` — you will be redirected to `/login`. After signing in, you land on the authenticated home page that confirms your email.
 
+## Supabase Studio (local web console)
+
+`npm run db:start` boots the full local Supabase stack, which includes the **Studio web console** at `http://127.0.0.1:54323`. Use it to:
+
+- Create test users for the admin-provisioning workflow (Authentication → Users → Add user → enable "Auto-confirm user"). This is the same workflow referenced in step 3 of the first-time setup above.
+- Browse tables in the `budget` schema and inspect Row Level Security policies.
+- Run ad-hoc SQL against the local database via the SQL editor.
+
+Studio is configured in `supabase/config.toml` under `[studio]` (`enabled = true`, `port = 54323`).
+
 ## Database / migrations
 
 ```sh
-npm run supabase:reset      # alias for `supabase db reset`
+npm run db:reset        # `npx supabase db reset` — re-runs migrations + the RLS self-check
+npm run supabase:reset  # back-compat alias for the same command
 ```
 
 Migrations live in `supabase/migrations/`. Every table is created in the `budget` schema with Row Level Security and explicit owner policies. The final migration (`*_rls_test.sql`) is a self-checking SQL block that asserts user A cannot read, modify, or delete user B's data — a failure there aborts `db reset`, so the schema can never ship without isolation.
