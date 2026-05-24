@@ -1,36 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Budget
 
-## Getting Started
+A personal budgeting app built on Next.js (App Router) and Supabase.
 
-First, run the development server:
+The data layer lives in the `budget` Postgres schema with Row Level Security on every table. This feature ships against a **local Supabase stack only** — a dedicated paid cloud Supabase project for the Budget app will be added in a later feature (see `specs/001-setup-supabase/research.md` § R9).
 
-```bash
+## First-time setup
+
+You need Node 20+, npm, and Docker (or OrbStack) running.
+
+1. **Install dependencies**
+
+   ```sh
+   npm install
+   ```
+
+2. **Boot the local Supabase stack and apply migrations**
+
+   ```sh
+   npm run db:start    # boots Postgres + GoTrue + PostgREST + Studio in Docker
+   npm run db:reset    # applies all migrations + the RLS self-check
+   ```
+
+   `db:start` prints the local API URL (default `http://127.0.0.1:54321`) and the anon key — you'll paste them into `.env.local`. It also boots the Studio web console (see below).
+
+3. **Create a test user in the local stack**
+
+   Open Supabase Studio at `http://127.0.0.1:54323`, go to Authentication → Users → Add user, enable "Auto-confirm user", and remember the email/password. There is no public signup in the app by design.
+
+4. **Configure environment variables**
+
+   ```sh
+   cp .env.local.example .env.local
+   ```
+
+   Fill in:
+
+   - `NEXT_PUBLIC_SUPABASE_URL` — local API URL from `supabase start`.
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — anon key from `supabase start`.
+   - `E2E_USER_A_*` (and `E2E_USER_B_*` if you want the multi-tab tests) — the credentials of the user(s) you created in Studio.
+
+   `.env.local` is git-ignored; never commit real values.
+
+## Run the app
+
+```sh
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3023` — you will be redirected to `/login`. After signing in, you land on the authenticated home page that confirms your email.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase Studio (local web console)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`npm run db:start` boots the full local Supabase stack, which includes the **Studio web console** at `http://127.0.0.1:54323`. Use it to:
 
-## Learn More
+- Create test users for the admin-provisioning workflow (Authentication → Users → Add user → enable "Auto-confirm user"). This is the same workflow referenced in step 3 of the first-time setup above.
+- Browse tables in the `budget` schema and inspect Row Level Security policies.
+- Run ad-hoc SQL against the local database via the SQL editor.
 
-To learn more about Next.js, take a look at the following resources:
+Studio is configured in `supabase/config.toml` under `[studio]` (`enabled = true`, `port = 54323`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Database / migrations
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sh
+npm run db:reset        # `npx supabase db reset` — re-runs migrations + the RLS self-check
+npm run supabase:reset  # back-compat alias for the same command
+```
 
-## Deploy on Vercel
+Migrations live in `supabase/migrations/`. Every table is created in the `budget` schema with Row Level Security and explicit owner policies. The final migration (`*_rls_test.sql`) is a self-checking SQL block that asserts user A cannot read, modify, or delete user B's data — a failure there aborts `db reset`, so the schema can never ship without isolation.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+When the Budget app gets its own cloud Supabase project (later feature), the same migration directory will be pushed via `supabase db push`. No app code changes are expected.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tests
+
+End-to-end tests (Playwright) cover the critical auth flow (Constitution Principle IV).
+
+```sh
+npm run test:e2e
+```
+
+The test runner starts the dev server automatically. Tests require valid `E2E_USER_A_*` and (for the multi-tab test) `E2E_USER_B_*` credentials in `.env.local`, with both users created in your local Supabase Studio.
+
+## Project structure
+
+```text
+app/                      # Next.js App Router
+├── login/                # Public sign-in page
+└── (authed)/             # Authenticated route group (layout, error & loading boundaries, home)
+actions/                  # Server Actions (signIn, signOut)
+components/
+├── AppHeader.tsx
+├── SignOutButton.tsx
+└── ui/                   # Shared primitives (Button, TextInput)
+lib/
+├── auth.ts               # getCurrentUser()
+└── supabase/             # Browser + server Supabase clients
+proxy.ts                  # Next.js 16 proxy: session refresh + auth gate + CSP nonce
+supabase/
+├── config.toml           # Local Supabase CLI config — exposes only `budget` schema
+└── migrations/           # Versioned schema (categories, transactions, RLS test)
+tests/e2e/                # Playwright critical-path tests (anonymous + authed projects)
+```
+
+See `specs/001-setup-supabase/` for the full spec, plan, and design artifacts.

@@ -1,0 +1,3 @@
+# Supabase CLI local artifacts (created by `supabase start` / `supabase db reset`)
+.branches
+.temp

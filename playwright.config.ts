@@ -5,7 +5,7 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
@@ -13,16 +13,22 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",
-    viewport: { width: 375, height: 812 },
   },
+  // Pre-signs-in user A and writes session cookies to tests/e2e/.auth/userA.json.
+  globalSetup: "./tests/e2e/global-setup",
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Pixel 5"] },
+      name: "anonymous",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /anonymous\/.*\.spec\.ts$/,
     },
     {
-      name: "webkit",
-      use: { ...devices["iPhone 13"] },
+      name: "authed-userA",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "tests/e2e/.auth/userA.json",
+      },
+      testMatch: /authed\/.*\.spec\.ts$/,
     },
   ],
   webServer: {

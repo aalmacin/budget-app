@@ -1,20 +1,27 @@
 # Local Supabase project configuration.
-# Populated by `supabase init`; this file is committed to the repo.
-# Run `supabase start` to bring up the local stack on the ports below.
-
+# For detailed configuration reference documentation, visit:
+# https://supabase.com/docs/guides/local-development/cli/config
 project_id = "budget"
 
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "graphql_public"]
-extra_search_path = ["public", "extensions"]
+# Expose only the budget schema for this app; graphql_public is the Supabase default
+# for GraphiQL and is kept to avoid breaking dashboard tooling. The default `public`
+# schema is intentionally NOT exposed here — this app's tables live in `budget`
+# (FR-013) and keeping `public` off the API surface prevents accidental leakage.
+schemas = ["budget", "graphql_public"]
+extra_search_path = ["budget", "public", "extensions"]
 max_rows = 1000
+
+[api.tls]
+enabled = false
 
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+health_timeout = "2m"
+major_version = 17
 
 [db.pooler]
 enabled = false
@@ -23,6 +30,22 @@ pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
 
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+# No seed data ships with this feature. Categories and transactions are created
+# at runtime by signed-in users. Re-enable and add paths if/when later features
+# need deterministic fixtures.
+enabled = false
+sql_paths = []
+
+[db.network_restrictions]
+enabled = false
+allowed_cidrs = ["0.0.0.0/0"]
+allowed_cidrs_v6 = ["::/0"]
+
 [realtime]
 enabled = true
 ip_version = "IPv4"
@@ -30,37 +53,57 @@ ip_version = "IPv4"
 [studio]
 enabled = true
 port = 54323
-api_url = "http://localhost:54321"
+api_url = "http://127.0.0.1"
 
 [inbucket]
 enabled = true
 port = 54324
 
 [storage]
-enabled = false
+enabled = true
+file_size_limit = "50MiB"
 
 [auth]
 enabled = true
 site_url = "http://localhost:3023"
 additional_redirect_urls = ["http://localhost:3023"]
 jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
 enable_signup = false
 enable_anonymous_sign_ins = false
 enable_manual_linking = false
+minimum_password_length = 8
+password_requirements = ""
 
 [auth.email]
 enable_signup = false
 double_confirm_changes = true
 enable_confirmations = false
-secure_password_change = true
+secure_password_change = false
 max_frequency = "1s"
-
-[auth.email.smtp]
-enabled = false
+otp_length = 6
+otp_expiry = 3600
 
 [auth.sms]
 enable_signup = false
 enable_confirmations = false
+template = "Your code is {{ .Code }} ."
+max_frequency = "5s"
 
 [edge_runtime]
-enabled = false
+enabled = true
+policy = "oneshot"
+inspector_port = 8083
+
+[analytics]
+enabled = true
+port = 54327
+backend = "postgres"
+
+[experimental]
+orioledb_version = ""
+s3_host = "env(S3_HOST)"
+s3_region = "env(S3_REGION)"
+s3_access_key = "env(S3_ACCESS_KEY)"
+s3_secret_key = "env(S3_SECRET_KEY)"
