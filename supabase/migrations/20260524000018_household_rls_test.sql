@@ -22,14 +22,19 @@ DO $$
 DECLARE
   user_a UUID := '00000000-0000-0000-0000-00000000001a';
   user_b UUID := '00000000-0000-0000-0000-00000000001b';
+  -- user_c starts with NO household membership; used by Part 3 to exercise
+  -- the create_household happy path (and the auth.users read it depends on).
+  user_c UUID := '00000000-0000-0000-0000-00000000001c';
   household_a UUID;
   household_b UUID;
+  household_c UUID;
   v_seed_cat UUID;
   visible_count INT;
   blocked BOOLEAN;
   i INT;
   v_table TEXT;
   v_qual TEXT;
+  v_member_display TEXT;
 BEGIN
   BEGIN
     ---------------------------------------------------------------------------
@@ -43,7 +48,9 @@ BEGIN
       (user_a, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
        'household-rls-a@example.invalid', '', now(), now(), now(), '{}'::jsonb, '{}'::jsonb, false),
       (user_b, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-       'household-rls-b@example.invalid', '', now(), now(), now(), '{}'::jsonb, '{}'::jsonb, false);
+       'household-rls-b@example.invalid', '', now(), now(), now(), '{}'::jsonb, '{}'::jsonb, false),
+      (user_c, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+       'household-rls-c@example.invalid', '', now(), now(), now(), '{}'::jsonb, '{}'::jsonb, false);
 
     INSERT INTO budget.household (name, owner_user_id) VALUES ('A', user_a)
       RETURNING id INTO household_a;
@@ -164,6 +171,37 @@ BEGIN
     SELECT count(*) INTO visible_count FROM budget.list_transactions('{}'::jsonb);
     IF visible_count <> 1 THEN
       RAISE EXCEPTION 'Cross-household test failed: B saw % transactions, expected 1 (their own)', visible_count;
+    END IF;
+
+    ---------------------------------------------------------------------------
+    -- Part 3: create_household happy path — exercises the auth.users read
+    -- helper end-to-end. Without budget.current_user_display_name() granted
+    -- to budget_function_owner, this section raises `permission denied for
+    -- table users` and fails db:reset — guarding against the C1 regression
+    -- reported via /onboarding/create-household on 2026-05-24.
+    ---------------------------------------------------------------------------
+    PERFORM set_config(
+      'request.jwt.claims',
+      '{"sub":"00000000-0000-0000-0000-00000000001c","role":"authenticated"}',
+      true
+    );
+
+    household_c := budget.create_household('C');
+    IF household_c IS NULL THEN
+      RAISE EXCEPTION 'create_household test failed: returned NULL household id';
+    END IF;
+
+    -- Verification routed through list_household_members() RPC because
+    -- direct table SELECT is blocked by the lockdown verified in Part 1.
+    SELECT m.display_name INTO v_member_display
+    FROM budget.list_household_members() m
+    WHERE m.user_id = user_c AND m.role = 'adult';
+    IF v_member_display IS NULL THEN
+      RAISE EXCEPTION 'create_household test failed: no adult member row for user_c';
+    END IF;
+    -- Expected: email local-part 'household-rls-c' (raw_user_meta_data is empty).
+    IF v_member_display <> 'household-rls-c' THEN
+      RAISE EXCEPTION 'create_household test failed: display_name was % (expected household-rls-c)', v_member_display;
     END IF;
 
     -- Sentinel rollback.

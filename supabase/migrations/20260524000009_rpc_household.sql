@@ -4,9 +4,16 @@
 -- member. Returns the new household id (the client redirects on success;
 -- see app/(auth)/onboarding/create-household/actions.ts).
 --
--- The display_name derivation prefers the auth user's full_name metadata
--- over the email local-part; both are safe (the user provided them at
--- account creation). Falls back to 'Adult' if neither is present.
+-- Two reads against auth.users are needed:
+--   - the display_name derivation, delegated to
+--     budget.current_user_display_name(); and
+--   - the two table INSERTs themselves, delegated to
+--     budget.bootstrap_household() because at the moment of those inserts
+--     the caller has zero memberships, so the household/household_member
+--     RLS WITH CHECK ("household_id ∈ caller's memberships") fails for
+--     the budget_function_owner role this RPC runs as. The bootstrap
+--     helper is postgres-owned and therefore bypasses RLS for that one
+--     two-row operation. See migration 20260524000017_auth_user_helpers.sql.
 
 CREATE OR REPLACE FUNCTION budget.create_household(p_name TEXT)
 RETURNS UUID
@@ -16,7 +23,6 @@ SET search_path = ''
 AS $$
 DECLARE
   v_user_id      UUID := auth.uid();
-  v_household_id UUID;
   v_display_name TEXT;
 BEGIN
   IF v_user_id IS NULL THEN
@@ -27,26 +33,9 @@ BEGIN
     RAISE EXCEPTION 'Household name is required' USING ERRCODE = '22023';
   END IF;
 
-  SELECT coalesce(
-    nullif(au.raw_user_meta_data->>'full_name', ''),
-    split_part(au.email, '@', 1),
-    'Adult'
-  )
-  INTO v_display_name
-  FROM auth.users au
-  WHERE au.id = v_user_id;
+  v_display_name := budget.current_user_display_name();
 
-  INSERT INTO budget.household (name, owner_user_id)
-  VALUES (trim(p_name), v_user_id)
-  RETURNING id INTO v_household_id;
-
-  INSERT INTO budget.household_member (
-    household_id, user_id, role, display_name
-  ) VALUES (
-    v_household_id, v_user_id, 'adult', coalesce(v_display_name, 'Adult')
-  );
-
-  RETURN v_household_id;
+  RETURN budget.bootstrap_household(v_user_id, p_name, v_display_name);
 END;
 $$;
 

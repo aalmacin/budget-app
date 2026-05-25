@@ -25,6 +25,17 @@ $$;
 COMMENT ON FUNCTION budget.auth_user_household_ids() IS
   'Returns the household_ids the current auth user actively belongs to. Used by RLS policies.';
 
+-- The create_household chicken-and-egg (caller has zero memberships at the
+-- moment the household + first member rows are created) is handled OUTSIDE
+-- this policy by a postgres-owned bootstrap helper that bypasses RLS for
+-- the two inserts (see budget.bootstrap_household in
+-- 20260524000017_auth_user_helpers.sql). An OR-carve-out in WITH CHECK was
+-- attempted and reverted: combining the helper subquery with an
+-- `OR owner_user_id = auth.uid()` branch in a single WITH CHECK expression
+-- caused the WITH CHECK to evaluate as NULL on this Postgres version
+-- (STABLE-function caching interaction with the SECURITY DEFINER subquery),
+-- which the planner treats as policy violation. The bootstrap-helper
+-- approach keeps this policy clean and behaves identically.
 CREATE POLICY household_household_isolation ON budget.household
   FOR ALL
   TO public

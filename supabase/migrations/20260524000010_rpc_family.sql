@@ -64,6 +64,11 @@ GRANT EXECUTE ON FUNCTION budget.list_household_members() TO authenticated;
 -- add_adult_by_email(p_email) — resolves an existing auth.users row and
 -- inserts/restores them as an adult in the caller's household.
 --
+-- The auth.users read is delegated to budget.resolve_user_by_email() (see
+-- migration 20260524000017_auth_user_helpers.sql) — same rationale as
+-- create_household: budget_function_owner cannot have direct SELECT on
+-- auth.users without leaking PII to every household-scoped RPC.
+--
 -- Returns (status, member_id):
 --   inserted     — new household_member row created
 --   restored     — soft-deleted member row's deleted_at cleared
@@ -90,14 +95,9 @@ BEGIN
     RAISE EXCEPTION 'Email is required' USING ERRCODE = '22023';
   END IF;
 
-  SELECT au.id,
-         coalesce(nullif(au.raw_user_meta_data->>'full_name', ''),
-                  split_part(au.email, '@', 1),
-                  'Adult')
+  SELECT r.user_id, r.display_name
   INTO v_target_uid, v_display_name
-  FROM auth.users au
-  WHERE lower(au.email) = lower(trim(p_email))
-  LIMIT 1;
+  FROM budget.resolve_user_by_email(p_email) r;
 
   IF v_target_uid IS NULL THEN
     RETURN QUERY SELECT 'not_found'::TEXT, NULL::UUID;

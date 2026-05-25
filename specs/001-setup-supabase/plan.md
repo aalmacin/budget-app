@@ -132,7 +132,8 @@ supabase/
     ├── 20260524000014_cron_subscriptions.sql        # pg_cron in extensions schema + hourly schedule
     ├── 20260524000015_rpc_reports.sql               # cashflow_kpis, essentials_breakdown, spend_over_time, per_person_breakdown
     ├── 20260524000016_helper_security_definer_fix.sql  # flips auth_user_household_ids() to SECURITY DEFINER to break the policy/helper recursion cycle (latent bug surfaced during T097 authoring)
-    └── 20260524000017_household_rls_test.sql        # T097 — SQL-level lockdown + cross-household isolation assertions (renumbered from …000016)
+    ├── 20260524000017_auth_user_helpers.sql         # T055a — postgres-owned helpers for auth.users reads (current_user_display_name, resolve_user_by_email)
+    └── 20260524000018_household_rls_test.sql        # T097 — SQL-level lockdown + cross-household isolation + create_household happy path (renumbered from …000016)
 
 tests/
 └── e2e/
