@@ -49,6 +49,10 @@ npm run dev
 
 Open `http://localhost:3023` — you will be redirected to `/login`. After signing in, you land on the authenticated home page that confirms your email.
 
+If this is your first time on this account, visiting `/dashboard` (or any household-scoped route under `/(app)/`) redirects you to `/onboarding/create-household`. Submit a household name and you'll land on `/dashboard` with yourself as the household's first adult. Manage additional adults and kids at `/family`. See `specs/001-setup-supabase/quickstart.md` § "Phase 7 — Household onboarding" for the full flow including the 2-adult cap and subscription auto-materialization.
+
+**After pulling this branch**, you MUST run `npm run db:reset` to pick up the Phase 7 schema (household + member + subscription tables) and ~30 new RPCs. The app will throw `Could not find the function budget.create_household` on first request otherwise.
+
 ## Supabase Studio (local web console)
 
 `npm run db:start` boots the full local Supabase stack, which includes the **Studio web console** at `http://127.0.0.1:54323`. Use it to:
@@ -66,7 +70,9 @@ npm run db:reset        # `npx supabase db reset` — re-runs migrations + the R
 npm run supabase:reset  # back-compat alias for the same command
 ```
 
-Migrations live in `supabase/migrations/`. Every table is created in the `budget` schema with Row Level Security and explicit owner policies. The final migration (`*_rls_test.sql`) is a self-checking SQL block that asserts user A cannot read, modify, or delete user B's data — a failure there aborts `db reset`, so the schema can never ship without isolation.
+Migrations live in `supabase/migrations/`. Every table is created in the `budget` schema with Row Level Security and explicit owner policies. Two self-checking SQL blocks (`*_rls_test.sql` for the user-owned model, `*_household_rls_test.sql` for the household model) assert cross-user / cross-household isolation — a failure there aborts `db reset`, so the schema can never ship without isolation.
+
+Direct table reads from the client are revoked (`*_lockdown_*.sql`). All client mutations and household-scoped reads go through `SECURITY DEFINER` Postgres functions owned by a non-superuser role (`budget_function_owner`), called via `supabase.rpc(...)`. The full RPC inventory and rationale is in `specs/001-setup-supabase/research.md` § R14.
 
 When the Budget app gets its own cloud Supabase project (later feature), the same migration directory will be pushed via `supabase db push`. No app code changes are expected.
 

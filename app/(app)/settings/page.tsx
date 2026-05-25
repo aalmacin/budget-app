@@ -15,34 +15,26 @@ type CategoryRow = { id: string; name: string; default_essential_pct: number };
 export default async function SettingsPage() {
   const supabase = await createSupabaseServerClient();
 
-  const { data: membership } = await supabase
-    .from("household_member")
-    .select("household_id")
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
+  const { data: householdData } = await supabase.rpc("get_current_household");
+  const householdId = (householdData ?? undefined) as string | undefined;
 
-  const householdId = membership?.household_id as string | undefined;
-
-  const [{ data: splitData }, { data: adultsData }, { data: categoriesData }] =
+  const [{ data: splitData }, { data: membersData }, { data: categoriesData }] =
     await Promise.all([
       householdId
         ? supabase.rpc("compute_income_split", { p_household_id: householdId })
         : Promise.resolve({ data: null }),
-      supabase
-        .from("household_member")
-        .select("id, display_name, monthly_income_cents")
-        .eq("role", "adult")
-        .is("deleted_at", null)
-        .order("created_at"),
-      supabase
-        .from("category")
-        .select("id, name, default_essential_pct")
-        .eq("kind", "expense")
-        .order("name"),
+      supabase.rpc("list_household_members"),
+      supabase.rpc("list_categories", { p_kind: "expense" }),
     ]);
 
-  const adults: MemberRow[] = (adultsData ?? []) as MemberRow[];
+  type FullMemberRow = MemberRow & { role: string };
+  const adults: MemberRow[] = ((membersData ?? []) as FullMemberRow[])
+    .filter((m) => m.role === "adult")
+    .map(({ id, display_name, monthly_income_cents }) => ({
+      id,
+      display_name,
+      monthly_income_cents,
+    }));
   const split: SplitRow[] = (splitData ?? []) as SplitRow[];
   const categories: CategoryRule[] = (categoriesData ?? []) as CategoryRow[];
 

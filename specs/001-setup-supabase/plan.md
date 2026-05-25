@@ -7,6 +7,8 @@
 
 Add Supabase as the auth and database layer for the Budget app, scoped to the `budget` schema on a **local Supabase stack** (see research.md § R9). Ship: email+password sign-in, server-side session refresh in middleware, an authenticated app shell (header showing email + sign-out), placeholder authenticated home, and `Category`/`Transaction` tables with RLS enforcing per-user isolation. Accounts are created out-of-band in Supabase Studio (locally; in Studio dashboard for the future cloud project); no signup, no MFA, no UI for Category/Transaction CRUD in this feature. Cloud deployment to a dedicated paid Supabase project is a later feature.
 
+**Phase 7 addendum (2026-05-24)**: Scope expanded to restore the household-based model carried over from the reference project. Adds `budget.household`, `budget.household_member`, `budget.subscription`; drops + recreates `budget.category` and `budget.transaction` as household-scoped (no production data exists); implements ~25 SECURITY DEFINER RPCs (owned by a new non-superuser role `budget_function_owner`) covering onboarding, family CRUD, transactions, subscriptions, budgets, dashboard, and reports; re-introduces `pg_cron` in the `extensions` schema for hourly subscription materialization. See spec.md US4–US8, FR-021–FR-035; data-model.md "Phase 7 entities"; research.md R12–R16; tasks.md Phase 7.
+
 Technical approach: `@supabase/ssr` for browser + server clients; Next.js App Router with a root middleware that refreshes the session and gates protected routes; Server Actions for sign-in/sign-out (auth-provider calls, exempt from the RPC rule per Principle III); migrations under `supabase/migrations/` with schema `budget` and policies built on `auth.uid()`; Playwright as the critical-path test runner for the auth flow.
 
 ## Technical Context
@@ -105,9 +107,32 @@ supabase/
 ├── .gitignore                       # NEW: ignore .temp/, .branches/, secrets
 └── migrations/
     ├── 20260522000000_budget_schema.sql        # CREATE SCHEMA budget; grant usage
-    ├── 20260522000001_categories.sql           # categories table + RLS
-    ├── 20260522000002_transactions.sql         # transactions table + RLS
-    └── 20260522000003_rls_test.sql             # SQL-level isolation assertions (run on db reset)
+    ├── 20260522000001_categories.sql           # categories table + RLS  (Phase 4; dropped in Phase 7 T058)
+    ├── 20260522000002_transactions.sql         # transactions table + RLS (Phase 4; dropped in Phase 7 T058)
+    ├── 20260522000003_rls_test.sql             # SQL-level isolation assertions (run on db reset)
+    ├── 20260522000004_drop_legacy_public.sql   # T044 — drops legacy public.* artifacts
+    ├── 20260522000005_lockdown_budget_grants.sql  # T045 — revoke direct grants on budget.*
+    ├── 20260522000006_rls_post_lockdown_test.sql  # T046 — verify lockdown
+    │
+    │   # Phase 7 (household model + full app restoration; T055–T093)
+    ├── 20260524000000_household_foundation.sql      # update_timestamp(), budget_function_owner role
+    ├── 20260524000001_household.sql                 # budget.household + RLS (no policy yet)
+    ├── 20260524000002_household_member.sql          # budget.household_member + adult cap triggers (no policy yet)
+    ├── 20260524000003_drop_user_owned_budget.sql    # drops the Phase 4 budget.categories + budget.transactions
+    ├── 20260524000004_helper_and_policies.sql       # auth_user_household_ids() helper + household/household_member policies — MUST precede any policy that references the helper (renumbered from …000005 per T060)
+    ├── 20260524000005_category.sql                  # household-scoped budget.category + system seeds (renumbered from …000004; depends on helper above)
+    ├── 20260524000006_transaction.sql               # household-scoped budget.transaction (full schema)
+    ├── 20260524000007_subscription.sql              # budget.subscription
+    ├── 20260524000008_lockdown_household_grants.sql # revoke direct; grant to budget_function_owner
+    ├── 20260524000009_rpc_household.sql             # create_household
+    ├── 20260524000010_rpc_family.sql                # add_adult_by_email, add_kid, soft_delete_member, update_member_income, list_household_members, get_current_household, list_kid_month_summary
+    ├── 20260524000011_rpc_transactions.sql          # list_transactions, log_expense, log_income, update_transaction, delete_transaction, list_quick_add_options, get_dashboard_summary
+    ├── 20260524000012_rpc_category_budget.sql       # set_category_essential_pct, set_category_budget, get_budget_progress, compute_income_split, list_categories
+    ├── 20260524000013_rpc_subscriptions.sql         # register_subscription, pause_subscription, resume_subscription, list_subscriptions, list_overlapping_subscriptions, materialize_due_subscriptions
+    ├── 20260524000014_cron_subscriptions.sql        # pg_cron in extensions schema + hourly schedule
+    ├── 20260524000015_rpc_reports.sql               # cashflow_kpis, essentials_breakdown, spend_over_time, per_person_breakdown
+    ├── 20260524000016_helper_security_definer_fix.sql  # flips auth_user_household_ids() to SECURITY DEFINER to break the policy/helper recursion cycle (latent bug surfaced during T097 authoring)
+    └── 20260524000017_household_rls_test.sql        # T097 — SQL-level lockdown + cross-household isolation assertions (renumbered from …000016)
 
 tests/
 └── e2e/

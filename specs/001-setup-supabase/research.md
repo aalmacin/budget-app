@@ -76,13 +76,16 @@ The `app/(authed)/layout.tsx` route group then performs a second `getCurrentUser
 
 **Open implementation detail (resolved during build, not blocking)**: Next.js 16's exact API for injecting a nonce into framework-emitted inline scripts may be `unstable_*` or a setting under `experimental` in `next.config.ts`. The implementer must consult `node_modules/next/dist/docs/` (per `AGENTS.md`) before wiring this and document the version-specific API used.
 
-**Resolved during implementation — `style-src 'unsafe-inline'` fallback**: The shipped `proxy.ts` emits `style-src 'self' 'nonce-<n>' 'unsafe-inline'`. This is intentional and **not** a relaxation of Principle II:
+**Resolved during implementation — shipped CSP shape (T053, T054)**: The shipped CSP in `lib/supabase/middleware.ts` is:
 
-- CSP Level 3 specifies that when a nonce or hash is present in `style-src`, browsers MUST ignore `'unsafe-inline'`. Modern browsers (Chrome 59+, Firefox 58+, Safari 15.4+) follow this; the policy is therefore effectively nonce-only for them.
-- `'unsafe-inline'` remains as a graceful fallback for older browsers that don't understand the nonce token. We accept this trade-off because the alternative is breaking the app entirely on those browsers; the constitution allows fallbacks documented in the plan.
-- `script-src` does **not** include `'unsafe-inline'` — the script policy is strict-nonce only.
+- `script-src 'self' 'nonce-<n>' 'strict-dynamic' https: 'unsafe-inline'` — plus `'unsafe-eval'` in development. The `'unsafe-inline'` token is overridden by `'strict-dynamic'` on CSP-Level-3 browsers (Chrome 59+, Firefox 58+, Safari 15.4+) and remains as a fallback only for older browsers that don't understand the nonce + strict-dynamic combination. The `'unsafe-eval'` dev-only gate is required by React 19's dev overlay — see "Post-merge addendum" below.
+- `style-src 'self' 'nonce-<n>'` — plus `'unsafe-inline'` in development. Production is strict-nonce only. The dev `'unsafe-inline'` mirrors the dev-only `'unsafe-eval'` gate on `script-src` and silences ~17 dev-overlay warnings that would otherwise mask real CSP violations.
 
-The same pattern is widely used in production Next.js apps and is the recommendation in the Next.js security docs for projects that depend on framework-managed inline styles.
+This is intentional and not a relaxation of Principle II. CSP Level 3 specifies that when `'strict-dynamic'` is present in `script-src` (or a nonce in `style-src`), browsers MUST ignore `'unsafe-inline'`; the policy is therefore effectively nonce-only for modern browsers. The fallback tokens accept a trade-off on legacy browsers that the constitution allows when documented.
+
+The same pattern is the recommendation in the Next.js security docs (`node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`).
+
+**Post-merge addendum — `'unsafe-eval'` required in dev (T053)**: A user-reported "the page refreshes when I click sign-in" bug was traced to React 19's dev-only `eval()` calls being blocked by CSP. Without `'unsafe-eval'` in `script-src`, the eval throws on page load, hydration aborts, `useActionState` never binds to the sign-in form, and the form's `action=""` falls back to a native browser POST — producing the visible page navigation the user perceived as "a refresh." Next.js's own CSP guide (`node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md`) calls this out explicitly: *"In development, `'unsafe-eval'` is required because React uses `eval` to provide enhanced debugging information, such as reconstructing server-side error stacks in the browser. `unsafe-eval` is not required for production."* Fix: gate the `'unsafe-eval'` source on `process.env.NODE_ENV === "development"` in `lib/supabase/middleware.ts` so production CSP stays strict. This is the same gating pattern the Next.js example uses.
 
 ---
 
@@ -184,6 +187,113 @@ This change also closes Supabase Advisor lints `pg_graphql_authenticated_table_e
 
 **Validation gap acknowledged**: An earlier draft of `20260522000006_rls_post_lockdown_test.sql` tried to validate the SECURITY DEFINER + FORCE RLS + `TO public` combination by creating a test helper inside the migration. It failed on first run with `SECURITY DEFINER helper returned 2 categories for user A (expected 1)`. The cause is a hard PostgreSQL rule: **superusers always bypass RLS, regardless of `FORCE ROW LEVEL SECURITY`**. Any function defined in a migration is owned by the migration role (`postgres`, a superuser) and therefore returns unfiltered rows — not because the policy or FORCE RLS is wrong, but because the definer is privileged. The production-correct pattern is to own the function with a non-superuser role that has explicit table grants (the standard Supabase pattern; e.g., create `budget_function_owner NOLOGIN`, grant it SELECT/INSERT/etc. on `budget.*`, and `ALTER FUNCTION ... OWNER TO budget_function_owner`). Introducing that role here would add scope without exercising any real call path, so the first CRUD feature owns both the role provisioning AND the RPC-pattern test. This migration now verifies only the lockdown property (direct DML from `authenticated` is rejected with `42501`); the RPC pattern is validated when there's a real RPC to test it with.
 
+## R11. Email auth provider toggle vs. signup toggle (post-implementation addendum)
+
+**Decision**: In `supabase/config.toml`, keep `[auth].enable_signup = false` (the master signup gate, FR-012a) and set `[auth.email].enable_signup = true`. Public signup remains blocked via the master gate; email/password sign-in is enabled via the per-provider gate.
+
+**Rationale**: A post-merge bug ("login does not work using my credentials") was traced to `[auth.email].enable_signup = false`, which had been set to satisfy the admin-provisioning clarification (Q3 of `spec.md` and FR-012a). GoTrue logs showed every `POST /token` returning `422 email_provider_disabled` and `docker exec supabase_auth_budget env` showed `GOTRUE_EXTERNAL_EMAIL_ENABLED=false`. The Supabase CLI source (`apps/cli-go/internal/start/start.go:1304`) maps that env var directly to `[auth.email].enable_signup`:
+
+```go
+fmt.Sprintf("GOTRUE_EXTERNAL_EMAIL_ENABLED=%v", utils.Config.Auth.Email.EnableSignup)
+```
+
+That is, the same TOML key controls **both** "can users sign up via the email provider" **and** "is the email provider live for any operation at all, including `signInWithPassword`." Disabling it to block signups also disabled password logins, which is what produced the bug.
+
+The correct knob for "no public signup" is `[auth].enable_signup = false`, which the CLI maps to `GOTRUE_DISABLE_SIGNUP=true` (a distinct env var, the master switch over every provider). That flag blocks the public `/signup` route while leaving `signInWithPassword` and the admin API (used by Studio's "Add user") fully functional.
+
+**Alternatives considered**:
+
+- **Leave `[auth.email].enable_signup = false`; rely on a different mechanism to allow password sign-in** — not viable: there is no separate "enable email provider for login only" key in `[auth.email]`. The CLI does not expose one.
+- **Disable the email provider entirely and use only the admin API for everything** — rejected: clients still need `signInWithPassword` to authenticate, and that path goes through the email provider. Disabling it is incompatible with the sign-in user story (US1).
+- **Switch to magic-link or OTP sign-in** — out of scope per Assumptions ("Email + password is the chosen sign-in method").
+
+**Implications recorded in spec/quickstart**:
+
+- `quickstart.md` Troubleshooting now lists "Sign-in always returns 'Email or password is incorrect'" → check `[auth.email].enable_signup`.
+- The admin-provisioning model (FR-012a, Q3) is unchanged; only the implementation-level config flag changed.
+
+**Related secondary finding (tracked as task T052, not closed by this decision)**: `lib/validators/auth.ts` enforces ≥1 digit + ≥1 symbol on the *sign-in* form, but `supabase/config.toml` has `password_requirements = ""` (no enforcement). A Studio-created password without a digit/symbol is accepted by Supabase but rejected by the form, yielding the same generic "Email or password is incorrect" error. The comment in `auth.ts:9` references a nonexistent task `T042a` that was supposed to align them. Recommended resolution: drop the digit/symbol checks from the sign-in validator (sign-in does not create passwords; Supabase is the source of truth for what passwords are valid).
+
+---
+
+## R12. Household ownership model (Phase 7)
+
+**Decision**: For household-scoped data (categories, transactions, subscriptions, members), ownership is the calling user's *active household membership*, not `auth.uid()`. RLS predicates read from `budget.auth_user_household_ids()` (ported from legacy `0001_init.sql:36–47`) which returns the household ids the caller is an active member of. Cross-household isolation is enforced at the database; cross-member isolation within the same household is intentionally NOT enforced (members share their household's data).
+
+**Rationale**: The product is a *family* budget app. Sharing across the household is a feature, not a leak — both adults of a household need to see and edit the same transactions, dashboard, subscriptions, etc. Membership-based RLS expresses this cleanly: a member's `auth.uid()` resolves to a (possibly empty) set of household ids via `household_member`, and every household-scoped row is filtered to that set. The Phase 4 model (`auth.uid() = user_id` direct) doesn't compose: it would require duplicating every record per member, or a brittle "any-of" check in policies.
+
+**Alternatives considered**:
+
+- **Direct `auth.uid()` on every row + a `share_with` array** — rejected: explodes write complexity (every insert needs the array), can't express "added a new adult to an existing household".
+- **Per-table `household_id` with no membership table; resolve household via `auth.users.raw_app_meta_data->>'household_id'`** — rejected: stores authorization data outside the database, breaks the "single source of truth" property; also forces re-issuing the JWT every time a user joins or leaves a household.
+- **Schema-per-household** — rejected: doesn't scale, breaks reporting across the system seeds.
+
+**Constitution interaction**: FR-013 (`budget` schema) is preserved — every Phase 7 table lives in `budget`. Principle III (Postgres functions for backend logic) is preserved AND tightened — Phase 7 introduces the SECURITY DEFINER RPC pattern at scale, with the lockdown extended to the new tables (R14 below).
+
+---
+
+## R13. Schema migration strategy for the Phase 4 user-owned tables
+
+**Decision**: Drop `budget.transactions` and `budget.categories` (the user-owned tables created by T020/T021) and recreate them under the household-scoped shape (T058–T061). Safe because Phase 4 shipped without any UI for these tables — there are no production rows to preserve.
+
+**Rationale**: An additive migration (`ALTER TABLE ... ADD COLUMN household_id`, then a column-rename, then a policy swap) would require backfilling NULL `household_id` from the `user_id` via a `(user_id → first_household_membership)` lookup. That lookup doesn't exist yet (the household model itself doesn't exist yet), so the migration would need a multi-step bootstrap. Drop-and-recreate is the simpler operation when the source data is empty.
+
+**Operational gate**: T058's migration header MUST state explicitly that the drop is conditional on "no production data exists". The first time Phase 7 ships to a cloud project that has accumulated data, this assumption must be re-verified — if the assumption breaks, the migration becomes a multi-step backfill instead.
+
+**Alternatives considered**:
+
+- **Additive migration with backfill** — rejected for the reason above. Worth reconsidering if a later environment has real data when Phase 7 ships there.
+- **Leave the Phase 4 tables in place under different names (e.g. `budget.user_categories`, `budget.user_transactions`) and let both schemas coexist** — rejected: two parallel data models double the surface area for almost no upside.
+
+---
+
+## R14. RPC API surface (Phase 7)
+
+**Decision**: Author ~25 SECURITY DEFINER RPCs in the `budget` schema, one per write path + one per direct-read replacement, grouped into 6 feature-area migration files (`20260524000009_rpc_household.sql` through `20260524000015_rpc_reports.sql`). Every function:
+
+1. Is `LANGUAGE plpgsql` (or `sql` where pure).
+2. Has `SECURITY DEFINER`.
+3. Has `SET search_path = ''`; every table reference inside the body is schema-qualified (`budget.household`, not `household`).
+4. Is `OWNER TO budget_function_owner` — a non-superuser role (`NOLOGIN`) created in T055. **This is the critical bit that R10's "Validation gap" called out**: postgres-owned definers bypass RLS regardless of `FORCE ROW LEVEL SECURITY`, so the function owner must be a non-superuser with explicit grants on the relevant tables.
+5. Grants `EXECUTE ... TO authenticated` so the client can call it via `supabase.rpc()`.
+
+The cron-invoked `materialize_due_subscriptions` is a special case: it operates across households on behalf of the system, so the function takes a `bypass_rls boolean DEFAULT false` parameter; only the cron schedule invocation passes `true`, and the body sets `row_security = off` only on that branch. Documented in the function comment.
+
+**Rationale**: The constitution's Principle III says all client-to-backend business logic goes through Postgres functions. Phase 4 had no client UI, so this requirement was deferred. Phase 7 introduces ~10 routes that all need writes — so the RPC pattern has to materialize now, at scale. The `budget_function_owner` choice resolves the open issue R10 left unaddressed.
+
+**Alternatives considered**:
+
+- **Keep direct grants and rely on RLS + Principle III by convention** — rejected: convention without enforcement decays; R10 closed this for the Phase 4 tables and Phase 7 should not regress it.
+- **Per-RPC owner roles** — rejected: too much role management overhead for no measurable security gain.
+- **Service-role calls from a thin server-only client** — rejected: the service role bypasses RLS entirely, so a bug in one RPC could expose every household's data. The `definer + non-superuser + FORCE RLS + TO public` combination keeps RLS in the loop.
+
+**RPC inventory** (full list in `tasks.md` Phase 7 §7.3): `create_household`, `add_adult_by_email`, `add_kid`, `soft_delete_member`, `update_member_income`, `list_household_members`, `get_current_household`, `list_kid_month_summary`, `list_transactions`, `log_expense`, `log_income`, `update_transaction`, `delete_transaction`, `list_quick_add_options`, `get_dashboard_summary`, `set_category_essential_pct`, `set_category_budget`, `get_budget_progress`, `compute_income_split`, `list_categories`, `register_subscription`, `pause_subscription`, `resume_subscription`, `list_subscriptions`, `list_overlapping_subscriptions`, `materialize_due_subscriptions`, `cashflow_kpis`, `essentials_breakdown`, `spend_over_time`, `per_person_breakdown`.
+
+---
+
+## R15. Subscription materialization cron (Phase 7)
+
+**Decision**: Re-introduce `pg_cron` (which T044 dropped from `public`), but install it in the `extensions` schema (per Supabase recommended practice) so the `extension_in_public` lint stays closed. Schedule `subscriptions-hourly` at `0 * * * *` to call `budget.materialize_due_subscriptions(true)`. Idempotency is enforced physically by the unique index on `budget.transaction (subscription_id, occurrence_date)` (FR-032), so a missed cron run that gets retried doesn't double-post.
+
+**Rationale**: An hourly cadence satisfies SC-008 ("95% within 1 hour"). Idempotency at the table level means we don't need to track cron run state — the index simply rejects the duplicate insert if the materialization happens twice. The `extensions` schema placement matches Supabase's own convention for shared extensions and keeps the Advisor clean.
+
+**Alternatives considered**:
+
+- **Run materialization from the application layer on every dashboard render** — rejected: the cron path is the only thing that works when no one is signed in; "user opened the app" is not a guarantee for a budgeting tool used monthly.
+- **A separate worker process** — rejected: introduces a deployable that doesn't otherwise exist, for no win over `pg_cron`.
+
+---
+
+## R16. PWA offline outbox interaction (Phase 7)
+
+**Decision**: The existing `lib/pwa/outbox.ts` IndexedDB outbox and `lib/pwa/dispatch.ts` dispatcher continue to work unchanged. The two RPCs they target (`log_expense`, `log_income`) both take a single `p jsonb` parameter that includes a client-supplied `id` (UUID v7, minted by `dispatchOrEnqueue`); FR-031 enshrines this contract on the database side by making `budget.transaction.id` accept the client value rather than defaulting it. Optionally, `register_subscription` joins the `OutboxRpc` union (T095) so subscription registration also works offline.
+
+**Rationale**: The offline outbox already exists and is well-tested. The only contract requirement on the database side is "the RPC accepts the client-supplied id" — which is what UUID v7 idempotency replay needs. If the cron-materialized `subscription_id, occurrence_date` index from T061 ever sees a conflicting `id` from a replay, the insert silently no-ops (the user already submitted that transaction; replay just confirms it).
+
+**Alternatives considered**:
+
+- **Server-side ids only** — rejected: would force the outbox dispatcher to fetch a server id before the user is online (impossible) or generate ids server-side after replay (breaks idempotency on retry storms).
+
 ---
 
 ## Open items deferred to /speckit-tasks or implementation
@@ -193,3 +303,4 @@ These are not unresolved clarifications — they are routine implementer questio
 - Exact CSP directive list (connect-src for Supabase URL, img-src for next/image) — choose during middleware implementation.
 - Specific Playwright reporter / CI matrix — choose when wiring CI; not in scope for this feature beyond "tests run and pass locally."
 - README updates documenting the admin-provisioning step and required env vars — handled as a quickstart deliverable in Phase 1.
+- Exact SQL of every Phase 7 RPC body — derivable from the app code call sites (the parameter names and return shapes are fixed by the existing client); written per-migration during implementation.

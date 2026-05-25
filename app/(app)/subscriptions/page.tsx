@@ -28,20 +28,15 @@ export default async function SubscriptionsPage() {
 
   const [{ data: subsData }, { data: overlapData }, { data: categoriesData }] =
     await Promise.all([
-      supabase
-        .from("subscription")
-        .select("id, merchant, amount_cents, cadence, next_renewal_at, active, category_id")
-        .order("next_renewal_at"),
+      supabase.rpc("list_subscriptions"),
       supabase.rpc("list_overlapping_subscriptions"),
-      supabase
-        .from("category")
-        .select("id, name")
-        .eq("kind", "expense")
-        .order("name"),
+      supabase.rpc("list_categories", { p_kind: "expense" }),
     ]);
 
+  type RawCategory = { id: string; name: string };
+  const categoriesList = (categoriesData ?? []) as RawCategory[];
   const categoryMap = new Map<string, string>(
-    (categoriesData ?? []).map((c) => [c.id as string, c.name as string]),
+    categoriesList.map((c) => [c.id, c.name]),
   );
 
   const subscriptions: SubscriptionRow[] = ((subsData ?? []) as RawSub[]).map((s) => ({
@@ -60,9 +55,9 @@ export default async function SubscriptionsPage() {
     monthly_total_cents: BigInt(typeof o.monthly_total_cents === "string" ? o.monthly_total_cents : o.monthly_total_cents),
   }));
 
-  const categories = (categoriesData ?? []).map((c) => ({
-    id: c.id as string,
-    name: c.name as string,
+  const categories = categoriesList.map((c) => ({
+    id: c.id,
+    name: c.name,
   }));
 
   return (

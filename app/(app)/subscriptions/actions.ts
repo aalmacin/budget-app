@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+// Online-only by design: this is a server action, so it can't queue through
+// the IndexedDB outbox (which is client-side). If you want offline support,
+// move the submit handler to a "use client" component and call dispatchOrEnqueue
+// directly — but you'll also need to update lib/pwa/outbox.ts OutboxRpc and
+// have register_subscription accept a client-supplied id for idempotency.
 export async function registerSubscriptionAction(p: {
   merchant: string;
   amount_cents: bigint;

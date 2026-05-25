@@ -20,6 +20,11 @@ const DB_NAME = "budget-outbox";
 const DB_VERSION = 1;
 const STORE = "entries";
 
+// register_subscription is intentionally NOT in this union. Subscription
+// registration goes through a server action (subscriptions/actions.ts), and
+// server actions can't dispatch via `dispatchOrEnqueue` (which is `"use
+// client"` and writes to IndexedDB). If subscriptions ever need offline
+// support, lift the form submit handler to a client component first.
 export type OutboxRpc = "log_expense" | "log_income";
 
 export type OutboxEntry = {

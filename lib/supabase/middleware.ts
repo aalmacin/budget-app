@@ -27,10 +27,20 @@ function buildCsp(nonce: string): string {
   // Strict CSP: nonce-based for inline scripts/styles, self for everything else,
   // plus the Supabase origin for fetch/websocket connections.
   const supabaseOrigin = new URL(SUPABASE_URL!).origin;
+  // React/Next.js use eval() in dev to reconstruct server error stacks for the
+  // dev overlay. Without 'unsafe-eval' here, hydration aborts and `useActionState`
+  // never binds — Server Action forms then fall back to native browser POST,
+  // causing a visible page reload on submit. Not required in production.
+  const isDev = process.env.NODE_ENV === "development";
+  const scriptSrc = `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`;
+  // Next.js's dev overlay emits inline styles without our nonce; allow them in
+  // dev only so the console isn't drowned in CSP warnings that mask real ones.
+  // Production stays strict (nonce-only).
+  const styleSrc = `style-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-inline'" : ""}`;
   const directives: string[] = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline'`,
-    `style-src 'self' 'nonce-${nonce}'`,
+    scriptSrc,
+    styleSrc,
     `img-src 'self' data: blob: ${supabaseOrigin}`,
     `font-src 'self' data:`,
     `connect-src 'self' ${supabaseOrigin} wss://${new URL(SUPABASE_URL!).host}`,

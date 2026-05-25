@@ -9,29 +9,26 @@ export const metadata = { title: "Add income · Budget" };
 export default async function AddIncomePage() {
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: incomeCat }, { data: adultsData }] = await Promise.all([
-    supabase
-      .from("category")
-      .select("id")
-      .eq("kind", "income")
-      .is("household_id", null)
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("household_member")
-      .select("id, display_name")
-      .eq("role", "adult")
-      .is("deleted_at", null)
-      .order("created_at"),
+  const [{ data: incomeCats }, { data: membersData }] = await Promise.all([
+    supabase.rpc("list_categories", { p_kind: "income" }),
+    supabase.rpc("list_household_members"),
   ]);
 
-  const adults: AdultOption[] = (adultsData ?? []).map((a) => ({
-    id: a.id as string,
-    display_name: a.display_name as string,
-  }));
+  type RawCategory = { id: string; name: string; household_id: string | null };
+  type RawMember = { id: string; display_name: string; role: "adult" | "kid" };
+
+  // Prefer the system-global Income seed (household_id IS NULL) so multiple
+  // income transactions roll up into the same category in reports.
+  const incomeCategoryId =
+    ((incomeCats ?? []) as RawCategory[]).find((c) => c.household_id === null)?.id ??
+    ((incomeCats ?? []) as RawCategory[])[0]?.id ??
+    null;
+
+  const adults: AdultOption[] = ((membersData ?? []) as RawMember[])
+    .filter((m) => m.role === "adult")
+    .map((a) => ({ id: a.id, display_name: a.display_name }));
 
   const today = new Date().toISOString().slice(0, 10);
-  const incomeCategoryId = (incomeCat?.id as string | undefined) ?? null;
 
   return (
     <div className="pt-3">

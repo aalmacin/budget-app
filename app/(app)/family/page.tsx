@@ -20,11 +20,14 @@ type RawMember = {
 export default async function FamilyPage() {
   const supabase = await createSupabaseServerClient();
 
-  const { data: membersData } = await supabase
-    .from("household_member")
-    .select("id, display_name, role, age_years, monthly_income_cents, created_at")
-    .is("deleted_at", null)
-    .order("created_at");
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  const [{ data: membersData }, { data: kidSummaryData }] = await Promise.all([
+    supabase.rpc("list_household_members"),
+    supabase.rpc("list_kid_month_summary", { p_year: year, p_month: month }),
+  ]);
 
   const members: RawMember[] = (membersData ?? []) as RawMember[];
 
@@ -42,31 +45,12 @@ export default async function FamilyPage() {
 
   const kidsBase = members.filter((m) => m.role === "kid");
 
-  // Per-kid month spending: query transactions for_member_id in this month.
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10);
-
-  const kidIds = kidsBase.map((k) => k.id);
-  const { data: txnData } = kidIds.length
-    ? await supabase
-        .from("transaction")
-        .select("for_member_id, amount_cents, occurred_on")
-        .in("for_member_id", kidIds)
-        .gte("occurred_on", monthStart)
-        .lt("occurred_on", monthEnd)
-        .eq("type", "expense")
-    : { data: [] as Array<{ for_member_id: string; amount_cents: number | string; occurred_on: string }> };
-
+  type KidSummary = { kid_id: string; spent_cents: number | string; last_activity_day: string | null };
   const monthByKid = new Map<string, { spent: bigint; last: string | null }>();
-  for (const r of txnData ?? []) {
-    const k = r.for_member_id;
-    const cents = BigInt(typeof r.amount_cents === "string" ? r.amount_cents : r.amount_cents);
-    const prev = monthByKid.get(k) ?? { spent: 0n, last: null };
-    monthByKid.set(k, {
-      spent: prev.spent + cents,
-      last:
-        prev.last && prev.last > r.occurred_on ? prev.last : r.occurred_on,
+  for (const r of (kidSummaryData ?? []) as KidSummary[]) {
+    monthByKid.set(r.kid_id, {
+      spent: BigInt(typeof r.spent_cents === "string" ? r.spent_cents : r.spent_cents),
+      last: r.last_activity_day,
     });
   }
 

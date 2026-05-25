@@ -10,26 +10,20 @@ export default async function AddExpensePage() {
   const supabase = await createSupabaseServerClient();
 
   const [{ data: categoriesData }, { data: membersData }] = await Promise.all([
-    supabase
-      .from("category")
-      .select("id, name")
-      .eq("kind", "expense")
-      .order("name"),
-    supabase
-      .from("household_member")
-      .select("id, display_name, role")
-      .is("deleted_at", null)
-      .order("created_at"),
+    supabase.rpc("list_categories", { p_kind: "expense" }),
+    supabase.rpc("list_household_members"),
   ]);
 
-  const categories: CategoryOption[] = (categoriesData ?? []).map((c) => ({
-    id: c.id as string,
-    name: c.name as string,
+  type RawCategory = { id: string; name: string };
+  type RawMember = { id: string; display_name: string; role: "adult" | "kid" };
+  const categories: CategoryOption[] = ((categoriesData ?? []) as RawCategory[]).map((c) => ({
+    id: c.id,
+    name: c.name,
   }));
-  const members: MemberOption[] = (membersData ?? []).map((m) => ({
-    id: m.id as string,
-    display_name: m.display_name as string,
-    role: m.role as "adult" | "kid",
+  const members: MemberOption[] = ((membersData ?? []) as RawMember[]).map((m) => ({
+    id: m.id,
+    display_name: m.display_name,
+    role: m.role,
   }));
 
   const today = new Date().toISOString().slice(0, 10);

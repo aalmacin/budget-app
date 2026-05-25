@@ -32,18 +32,13 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  // Check active membership. If the household_member table doesn't exist yet
-  // (foundation phase before US1 migrations), .from() will surface a PostgREST
-  // error and we treat the user as un-onboarded.
-  const { data: membership, error: membershipError } = await supabase
-    .from("household_member")
-    .select("household_id")
-    .eq("user_id", user.id)
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
+  // Membership check via SECURITY DEFINER RPC (direct table reads are denied
+  // by the budget.* grant lockdown, T063). Empty result → un-onboarded.
+  const { data: householdId, error: membershipError } = await supabase.rpc(
+    "get_current_household",
+  );
 
-  if (!membership || membershipError) {
+  if (!householdId || membershipError) {
     redirect("/onboarding/create-household");
   }
 

@@ -1,0 +1,38 @@
+-- T060 — Phase 7: budget.auth_user_household_ids() helper +
+-- household/household_member RLS policies (deferred until the helper exists).
+--
+-- The helper queries budget.household_member, which must exist first; the
+-- household and household_member policies reference the helper, so they
+-- must come after it. Hence this migration sits between household_member
+-- (20260524000002) and category (20260524000005).
+--
+-- Marked STABLE so the planner can memoize per statement. SECURITY INVOKER
+-- so it sees the caller's auth.uid() rather than the function owner's role.
+
+CREATE OR REPLACE FUNCTION budget.auth_user_household_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+  SELECT hm.household_id
+  FROM budget.household_member hm
+  WHERE hm.user_id = auth.uid()
+    AND hm.deleted_at IS NULL;
+$$;
+
+COMMENT ON FUNCTION budget.auth_user_household_ids() IS
+  'Returns the household_ids the current auth user actively belongs to. Used by RLS policies.';
+
+CREATE POLICY household_household_isolation ON budget.household
+  FOR ALL
+  TO public
+  USING (id IN (SELECT * FROM budget.auth_user_household_ids()))
+  WITH CHECK (id IN (SELECT * FROM budget.auth_user_household_ids()));
+
+CREATE POLICY household_member_household_isolation ON budget.household_member
+  FOR ALL
+  TO public
+  USING (household_id IN (SELECT * FROM budget.auth_user_household_ids()))
+  WITH CHECK (household_id IN (SELECT * FROM budget.auth_user_household_ids()));
