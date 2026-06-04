@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AmountHero } from "@/components/ui/AmountHero";
+import { CategoryCombobox } from "@/components/transactions/CategoryCombobox";
 import { ForWhomChips } from "@/components/transactions/ForWhomChips";
 import { SplitSlider } from "@/components/transactions/SplitSlider";
 import { SplitRuleChips, type SplitRule } from "@/components/transactions/SplitRuleChips";
@@ -61,17 +62,7 @@ export function AddExpenseForm({ categories, members, todayIso }: Props) {
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-muted font-mono uppercase tracking-wider">Category</span>
-        <select
-          name="category_id"
-          required
-          className="w-full h-12 px-4 rounded-2xl bg-surface text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-sage/40"
-        >
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <CategoryCombobox categories={categories} required />
       </label>
 
       <label className="flex flex-col gap-1">
