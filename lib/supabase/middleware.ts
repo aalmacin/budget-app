@@ -26,14 +26,53 @@ function generateNonce(): string {
 function buildCsp(nonce: string): string {
   // Strict CSP: nonce-based for inline scripts/styles, self for everything else,
   // plus the Supabase origin for fetch/websocket connections.
+  //
+  // Dev needs three relaxations the Next.js CSP guide explicitly calls out
+  // (node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md):
+  //   1. script-src must allow 'unsafe-eval' — React dev uses eval for source
+  //      stacks; without it client hydration silently breaks and event
+  //      handlers never attach (this is what made the AppDrawer hamburger
+  //      look dead — click registered, dispatch never ran).
+  //   2. style-src must include 'unsafe-inline' — Next.js dev / Tailwind v4
+  //      inject inline styles without nonces.
+  //   3. connect-src must include the dev HMR WebSocket on the app's own
+  //      origin, otherwise the Next.js runtime fails to connect and React
+  //      stalls before hydration.
   const supabaseOrigin = new URL(SUPABASE_URL!).origin;
+  const supabaseHost = new URL(SUPABASE_URL!).host;
+  const isDev = process.env.NODE_ENV !== "production";
+
+  const scriptSrc = [
+    `'self'`,
+    `'nonce-${nonce}'`,
+    `'strict-dynamic'`,
+    `https:`,
+    `'unsafe-inline'`,
+    isDev ? `'unsafe-eval'` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const styleSrc = isDev
+    ? `'self' 'nonce-${nonce}' 'unsafe-inline'`
+    : `'self' 'nonce-${nonce}'`;
+
+  const connectSrc = [
+    `'self'`,
+    supabaseOrigin,
+    `wss://${supabaseHost}`,
+    isDev ? `ws://localhost:3023` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   const directives: string[] = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline'`,
-    `style-src 'self' 'nonce-${nonce}'`,
+    `script-src ${scriptSrc}`,
+    `style-src ${styleSrc}`,
     `img-src 'self' data: blob: ${supabaseOrigin}`,
     `font-src 'self' data:`,
-    `connect-src 'self' ${supabaseOrigin} wss://${new URL(SUPABASE_URL!).host}`,
+    `connect-src ${connectSrc}`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

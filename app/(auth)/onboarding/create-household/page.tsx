@@ -16,16 +16,11 @@ export default async function CreateHouseholdPage() {
     redirect("/login");
   }
 
-  // If the user already belongs to a household, skip onboarding.
-  const { data: membership } = await supabase
-    .from("household_member")
-    .select("household_id")
-    .eq("user_id", user.id)
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
+  // If the user already belongs to a household, skip onboarding. Direct
+  // .from() reads are blocked by the budget lockdown grants; use the RPC.
+  const { data: householdId } = await supabase.rpc("get_current_household");
 
-  if (membership) {
+  if (householdId) {
     redirect("/dashboard");
   }
 

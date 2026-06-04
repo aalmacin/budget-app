@@ -2,16 +2,27 @@
 
 import { createBrowserClient } from "@supabase/ssr";
 
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    throw new Error(`Supabase env var missing: ${name}. Set it in .env.local.`);
+// Direct static reads — Next.js' webpack DefinePlugin only inlines
+// `process.env.NEXT_PUBLIC_*` when the access is literal. Dynamic forms like
+// `process.env[name]` survive into the client bundle and resolve to undefined
+// at runtime, because the browser has no real `process.env`.
+function assertEnv(value: string | undefined, label: string): string {
+  if (!value) {
+    throw new Error(
+      `Supabase env var missing: ${label}. Set it in .env.local, then restart the dev server.`,
+    );
   }
-  return v;
+  return value;
 }
 
-const SUPABASE_URL = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
-const SUPABASE_ANON_KEY = requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+const SUPABASE_URL = assertEnv(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  "NEXT_PUBLIC_SUPABASE_URL",
+);
+const SUPABASE_ANON_KEY = assertEnv(
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+);
 
 let browserClient: ReturnType<typeof createBrowserClient> | undefined;
 

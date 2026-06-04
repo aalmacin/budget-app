@@ -1,17 +1,26 @@
 import { cookies } from "next/headers";
 import { createServerClient, type CookieMethodsServer } from "@supabase/ssr";
 
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) {
-    // Surfaced at startup rather than per-request so misconfiguration is loud.
-    throw new Error(`Supabase env var missing: ${name}. Set it in .env.local.`);
+// Direct static reads so the Next.js compiler inlines NEXT_PUBLIC_* values
+// into the bundle. `process.env[name]` (dynamic) is NOT replaced and would
+// resolve to undefined in any code path that ships to the browser.
+function assertEnv(value: string | undefined, label: string): string {
+  if (!value) {
+    throw new Error(
+      `Supabase env var missing: ${label}. Set it in .env.local, then restart the dev server.`,
+    );
   }
-  return v;
+  return value;
 }
 
-const SUPABASE_URL = requireEnv("NEXT_PUBLIC_SUPABASE_URL");
-const SUPABASE_ANON_KEY = requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+const SUPABASE_URL = assertEnv(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  "NEXT_PUBLIC_SUPABASE_URL",
+);
+const SUPABASE_ANON_KEY = assertEnv(
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+);
 
 /**
  * Server-side Supabase client for Server Components, Server Actions, and route
