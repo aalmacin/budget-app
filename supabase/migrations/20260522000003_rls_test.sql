@@ -26,8 +26,8 @@ DECLARE
 BEGIN
   -- Inner sub-block: implicit savepoint that scopes the rollback.
   BEGIN
-    -- Seed two synthetic users in auth.users so the FKs from budget.categories
-    -- and budget.transactions resolve. Both rows roll back via the sentinel.
+    -- Seed two synthetic users in auth.users so the FKs from public.categories
+    -- and public.transactions resolve. Both rows roll back via the sentinel.
     INSERT INTO auth.users (
       id, instance_id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
@@ -56,9 +56,9 @@ BEGIN
       true
     );
 
-    INSERT INTO budget.categories (name, kind) VALUES ('Groceries', 'expense')
+    INSERT INTO public.categories (name, kind) VALUES ('Groceries', 'expense')
       RETURNING id INTO cat_a_id;
-    INSERT INTO budget.transactions (amount, occurred_on, note, category_id)
+    INSERT INTO public.transactions (amount, occurred_on, note, category_id)
       VALUES (12.34, current_date, 'A''s groceries', cat_a_id);
 
     PERFORM set_config(
@@ -67,9 +67,9 @@ BEGIN
       true
     );
 
-    INSERT INTO budget.categories (name, kind) VALUES ('Groceries', 'expense')
+    INSERT INTO public.categories (name, kind) VALUES ('Groceries', 'expense')
       RETURNING id INTO cat_b_id;
-    INSERT INTO budget.transactions (amount, occurred_on, note, category_id)
+    INSERT INTO public.transactions (amount, occurred_on, note, category_id)
       VALUES (56.78, current_date, 'B''s groceries', cat_b_id);
 
     ---------------------------------------------------------------------------
@@ -80,11 +80,11 @@ BEGIN
       '{"sub":"00000000-0000-0000-0000-00000000000a","role":"authenticated"}',
       true
     );
-    SELECT count(*) INTO visible_count FROM budget.categories;
+    SELECT count(*) INTO visible_count FROM public.categories;
     IF visible_count <> 1 THEN
       RAISE EXCEPTION 'RLS test failed: user A should see exactly 1 category, saw %', visible_count;
     END IF;
-    SELECT count(*) INTO visible_count FROM budget.transactions;
+    SELECT count(*) INTO visible_count FROM public.transactions;
     IF visible_count <> 1 THEN
       RAISE EXCEPTION 'RLS test failed: user A should see exactly 1 transaction, saw %', visible_count;
     END IF;
@@ -94,7 +94,7 @@ BEGIN
       '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}',
       true
     );
-    SELECT count(*) INTO visible_count FROM budget.categories;
+    SELECT count(*) INTO visible_count FROM public.categories;
     IF visible_count <> 1 THEN
       RAISE EXCEPTION 'RLS test failed: user B should see exactly 1 category, saw %', visible_count;
     END IF;
@@ -103,19 +103,19 @@ BEGIN
     -- Step 3: user B cannot read/update/delete user A's rows by id.
     ---------------------------------------------------------------------------
     SELECT count(*) INTO cross_user_attempt_rows
-      FROM budget.categories WHERE id = cat_a_id;
+      FROM public.categories WHERE id = cat_a_id;
     IF cross_user_attempt_rows <> 0 THEN
       RAISE EXCEPTION 'RLS test failed: user B saw user A''s category (id=%)', cat_a_id;
     END IF;
 
-    UPDATE budget.categories SET name = 'Hijacked' WHERE id = cat_a_id;
+    UPDATE public.categories SET name = 'Hijacked' WHERE id = cat_a_id;
     GET DIAGNOSTICS cross_user_attempt_rows = ROW_COUNT;
     IF cross_user_attempt_rows <> 0 THEN
       RAISE EXCEPTION 'RLS test failed: user B updated user A''s category (% rows affected)',
         cross_user_attempt_rows;
     END IF;
 
-    DELETE FROM budget.categories WHERE id = cat_a_id;
+    DELETE FROM public.categories WHERE id = cat_a_id;
     GET DIAGNOSTICS cross_user_attempt_rows = ROW_COUNT;
     IF cross_user_attempt_rows <> 0 THEN
       RAISE EXCEPTION 'RLS test failed: user B deleted user A''s category (% rows affected)',
@@ -129,7 +129,7 @@ BEGIN
     -- or trigger raise) satisfies the requirement.
     ---------------------------------------------------------------------------
     BEGIN
-      INSERT INTO budget.transactions (amount, occurred_on, category_id)
+      INSERT INTO public.transactions (amount, occurred_on, category_id)
         VALUES (99.00, current_date, cat_a_id);
     EXCEPTION
       WHEN foreign_key_violation OR insufficient_privilege THEN

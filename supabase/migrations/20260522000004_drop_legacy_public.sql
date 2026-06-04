@@ -1,8 +1,12 @@
 -- Drops artifacts created by the prior `family-budget-app` migrations
--- (`0001_init.sql` through `0004_subscriptions.sql`). They conflict with FR-013
--- (Budget app data must live in the `budget` schema) and produce the public.*
--- lint warnings reported by Supabase Advisors (function_search_path_mutable,
--- extension_in_public, pg_graphql_anon_table_exposed, pg_graphql_authenticated_table_exposed).
+-- (`0001_init.sql` through `0004_subscriptions.sql`). They produce the
+-- public.* lint warnings reported by Supabase Advisors
+-- (function_search_path_mutable, extension_in_public,
+-- pg_graphql_anon_table_exposed, pg_graphql_authenticated_table_exposed) and
+-- their `public.transaction` / `public.household` / etc. table names predate
+-- the current schema; the active tables are `public.categories` and
+-- `public.transactions` (plural), created by the 20260522000001/2 migrations
+-- above and not touched by the drops below.
 --
 -- The original migrations remain in `supabase/migrations/` for history but no
 -- longer have any runtime effect after this drop.

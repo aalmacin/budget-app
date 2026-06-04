@@ -47,7 +47,6 @@ export async function createSupabaseServerClient() {
   };
 
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    db: { schema: "budget" },
     cookies: cookieMethods,
   });
 }
