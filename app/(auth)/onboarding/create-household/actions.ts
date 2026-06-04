@@ -29,6 +29,15 @@ export async function createHouseholdAction(
     redirect("/login");
   }
 
+  // Idempotency: bootstrap_household has no "already belongs" guard, so a
+  // double-submit (or a redirect bounce from a broken dashboard guard) used
+  // to create duplicate households. Short-circuit if the user is already in
+  // one.
+  const { data: existing } = await supabase.rpc("get_current_household");
+  if (existing) {
+    redirect("/dashboard");
+  }
+
   const { error } = await supabase.rpc("create_household", {
     p_name: parsed.data.name,
   });
