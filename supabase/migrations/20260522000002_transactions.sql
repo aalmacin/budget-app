@@ -1,26 +1,26 @@
 -- Transactions: user-owned monetary events, classified by exactly one Category.
--- See specs/001-setup-supabase/data-model.md § budget.transactions.
+-- See specs/001-setup-supabase/data-model.md § transactions.
 
-CREATE TABLE budget.transactions (
+CREATE TABLE public.transactions (
   id            BIGSERIAL PRIMARY KEY,
   amount        NUMERIC(14, 2) NOT NULL,
   occurred_on   DATE NOT NULL,
   note          TEXT CHECK (note IS NULL OR length(note) <= 500),
-  category_id   BIGINT NOT NULL REFERENCES budget.categories(id) ON DELETE RESTRICT,
+  category_id   BIGINT NOT NULL REFERENCES public.categories(id) ON DELETE RESTRICT,
   user_id       UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX transactions_user_id_occurred_on_idx
-  ON budget.transactions (user_id, occurred_on DESC);
+  ON public.transactions (user_id, occurred_on DESC);
 
 CREATE INDEX transactions_category_id_idx
-  ON budget.transactions (category_id);
+  ON public.transactions (category_id);
 
 -- FR-017: a transaction's category must belong to the same user. RLS alone
 -- would block reads, but at write time the FK only checks existence — not
 -- ownership. This trigger enforces ownership at the storage layer.
-CREATE FUNCTION budget.assert_transaction_category_owner()
+CREATE FUNCTION public.assert_transaction_category_owner()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = ''
@@ -29,7 +29,7 @@ DECLARE
   category_owner UUID;
 BEGIN
   SELECT user_id INTO category_owner
-  FROM budget.categories
+  FROM public.categories
   WHERE id = NEW.category_id;
 
   IF category_owner IS NULL THEN
@@ -49,17 +49,17 @@ $$;
 
 CREATE TRIGGER transactions_assert_category_owner
   BEFORE INSERT OR UPDATE OF category_id, user_id
-  ON budget.transactions
+  ON public.transactions
   FOR EACH ROW
-  EXECUTE FUNCTION budget.assert_transaction_category_owner();
+  EXECUTE FUNCTION public.assert_transaction_category_owner();
 
-ALTER TABLE budget.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY transactions_owner ON budget.transactions
+CREATE POLICY transactions_owner ON public.transactions
   FOR ALL
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON budget.transactions TO authenticated;
-GRANT USAGE, SELECT ON SEQUENCE budget.transactions_id_seq TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.transactions TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.transactions_id_seq TO authenticated;

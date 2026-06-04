@@ -1,8 +1,9 @@
 -- Post-lockdown verification — runs after 20260522000005_lockdown_budget_grants.sql.
 --
--- Verifies that `authenticated` cannot directly read or write `budget.*` —
--- proves the grant lockdown is in force and closes the
--- `pg_graphql_authenticated_table_exposed` lint for both budget tables.
+-- Verifies that `authenticated` cannot directly read or write
+-- `public.categories` / `public.transactions` — proves the grant lockdown is
+-- in force and closes the `pg_graphql_authenticated_table_exposed` lint for
+-- both tables.
 --
 -- What this migration does NOT validate, and why:
 -- The SECURITY DEFINER + FORCE ROW LEVEL SECURITY + `TO public` policy
@@ -34,7 +35,7 @@ BEGIN
     PERFORM set_config('role', 'authenticated', true);
 
     ---------------------------------------------------------------------------
-    -- budget.categories — all four DML verbs must be rejected with 42501.
+    -- public.categories — all four DML verbs must be rejected with 42501.
     ---------------------------------------------------------------------------
     direct_select_blocked := FALSE;
     direct_insert_blocked := FALSE;
@@ -42,47 +43,47 @@ BEGIN
     direct_delete_blocked := FALSE;
 
     BEGIN
-      PERFORM 1 FROM budget.categories;
+      PERFORM 1 FROM public.categories;
     EXCEPTION
       WHEN insufficient_privilege THEN
         direct_select_blocked := TRUE;
     END;
     IF NOT direct_select_blocked THEN
-      RAISE EXCEPTION 'Lockdown test failed: authenticated could SELECT budget.categories (expected permission denied)';
+      RAISE EXCEPTION 'Lockdown test failed: authenticated could SELECT public.categories (expected permission denied)';
     END IF;
 
     BEGIN
-      INSERT INTO budget.categories (name, kind) VALUES ('ShouldFail', 'expense');
+      INSERT INTO public.categories (name, kind) VALUES ('ShouldFail', 'expense');
     EXCEPTION
       WHEN insufficient_privilege THEN
         direct_insert_blocked := TRUE;
     END;
     IF NOT direct_insert_blocked THEN
-      RAISE EXCEPTION 'Lockdown test failed: authenticated could INSERT into budget.categories (expected permission denied)';
+      RAISE EXCEPTION 'Lockdown test failed: authenticated could INSERT into public.categories (expected permission denied)';
     END IF;
 
     BEGIN
-      UPDATE budget.categories SET name = 'Hijacked' WHERE id = -1;
+      UPDATE public.categories SET name = 'Hijacked' WHERE id = -1;
     EXCEPTION
       WHEN insufficient_privilege THEN
         direct_update_blocked := TRUE;
     END;
     IF NOT direct_update_blocked THEN
-      RAISE EXCEPTION 'Lockdown test failed: authenticated could UPDATE budget.categories (expected permission denied)';
+      RAISE EXCEPTION 'Lockdown test failed: authenticated could UPDATE public.categories (expected permission denied)';
     END IF;
 
     BEGIN
-      DELETE FROM budget.categories WHERE id = -1;
+      DELETE FROM public.categories WHERE id = -1;
     EXCEPTION
       WHEN insufficient_privilege THEN
         direct_delete_blocked := TRUE;
     END;
     IF NOT direct_delete_blocked THEN
-      RAISE EXCEPTION 'Lockdown test failed: authenticated could DELETE from budget.categories (expected permission denied)';
+      RAISE EXCEPTION 'Lockdown test failed: authenticated could DELETE from public.categories (expected permission denied)';
     END IF;
 
     ---------------------------------------------------------------------------
-    -- budget.transactions — same four-verb check.
+    -- public.transactions — same four-verb check.
     ---------------------------------------------------------------------------
     direct_select_blocked := FALSE;
     direct_insert_blocked := FALSE;
@@ -90,44 +91,44 @@ BEGIN
     direct_delete_blocked := FALSE;
 
     BEGIN
-      PERFORM 1 FROM budget.transactions;
+      PERFORM 1 FROM public.transactions;
     EXCEPTION
       WHEN insufficient_privilege THEN
         direct_select_blocked := TRUE;
     END;
     IF NOT direct_select_blocked THEN
-      RAISE EXCEPTION 'Lockdown test failed: authenticated could SELECT budget.transactions (expected permission denied)';
+      RAISE EXCEPTION 'Lockdown test failed: authenticated could SELECT public.transactions (expected permission denied)';
     END IF;
 
     BEGIN
-      INSERT INTO budget.transactions (amount, occurred_on, category_id)
+      INSERT INTO public.transactions (amount, occurred_on, category_id)
         VALUES (1.00, current_date, -1);
     EXCEPTION
       WHEN insufficient_privilege THEN
         direct_insert_blocked := TRUE;
     END;
     IF NOT direct_insert_blocked THEN
-      RAISE EXCEPTION 'Lockdown test failed: authenticated could INSERT into budget.transactions (expected permission denied)';
+      RAISE EXCEPTION 'Lockdown test failed: authenticated could INSERT into public.transactions (expected permission denied)';
     END IF;
 
     BEGIN
-      UPDATE budget.transactions SET amount = 0 WHERE id = -1;
+      UPDATE public.transactions SET amount = 0 WHERE id = -1;
     EXCEPTION
       WHEN insufficient_privilege THEN
         direct_update_blocked := TRUE;
     END;
     IF NOT direct_update_blocked THEN
-      RAISE EXCEPTION 'Lockdown test failed: authenticated could UPDATE budget.transactions (expected permission denied)';
+      RAISE EXCEPTION 'Lockdown test failed: authenticated could UPDATE public.transactions (expected permission denied)';
     END IF;
 
     BEGIN
-      DELETE FROM budget.transactions WHERE id = -1;
+      DELETE FROM public.transactions WHERE id = -1;
     EXCEPTION
       WHEN insufficient_privilege THEN
         direct_delete_blocked := TRUE;
     END;
     IF NOT direct_delete_blocked THEN
-      RAISE EXCEPTION 'Lockdown test failed: authenticated could DELETE from budget.transactions (expected permission denied)';
+      RAISE EXCEPTION 'Lockdown test failed: authenticated could DELETE from public.transactions (expected permission denied)';
     END IF;
 
     -- Sentinel: triggers the implicit-savepoint rollback so the role swap

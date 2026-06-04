@@ -1,7 +1,7 @@
 -- Categories: user-owned classifications for transactions.
--- See specs/001-setup-supabase/data-model.md § budget.categories.
+-- See specs/001-setup-supabase/data-model.md § categories.
 
-CREATE TABLE budget.categories (
+CREATE TABLE public.categories (
   id            BIGSERIAL PRIMARY KEY,
   name          TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 100),
   kind          TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
@@ -10,17 +10,15 @@ CREATE TABLE budget.categories (
   CONSTRAINT categories_user_id_name_key UNIQUE (user_id, name)
 );
 
-CREATE INDEX categories_user_id_idx ON budget.categories (user_id);
+CREATE INDEX categories_user_id_idx ON public.categories (user_id);
 
-ALTER TABLE budget.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY categories_owner ON budget.categories
+CREATE POLICY categories_owner ON public.categories
   FOR ALL
   TO authenticated
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- Explicit grants in addition to the default privileges set in 20260522000000,
--- so this migration is self-contained when reviewed in isolation.
-GRANT SELECT, INSERT, UPDATE, DELETE ON budget.categories TO authenticated;
-GRANT USAGE, SELECT ON SEQUENCE budget.categories_id_seq TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.categories TO authenticated;
+GRANT USAGE, SELECT ON SEQUENCE public.categories_id_seq TO authenticated;

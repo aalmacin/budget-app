@@ -6,12 +6,11 @@ project_id = "budget"
 [api]
 enabled = true
 port = 54321
-# Expose only the budget schema for this app; graphql_public is the Supabase default
-# for GraphiQL and is kept to avoid breaking dashboard tooling. The default `public`
-# schema is intentionally NOT exposed here — this app's tables live in `budget`
-# (FR-013) and keeping `public` off the API surface prevents accidental leakage.
-schemas = ["budget", "graphql_public"]
-extra_search_path = ["budget", "public", "extensions"]
+# The app's tables (public.categories, public.transactions) live in the
+# default `public` schema; graphql_public is the Supabase default for GraphiQL
+# and is kept to avoid breaking dashboard tooling.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [api.tls]
