@@ -7,6 +7,7 @@ import { filtersActions, type EssentialFilter } from "@/store/slices/filters";
 
 type Props = {
   members: Array<{ id: string; display_name: string }>;
+  categories: Array<{ id: string; name: string }>;
 };
 
 const FILTERS: EssentialFilter[] = ["all", "essential", "treats"];
@@ -45,7 +46,7 @@ function activeRange(from: string | null, to: string | null): RangeKey {
   return "all";
 }
 
-export function FilterChips({ members }: Props) {
+export function FilterChips({ members, categories }: Props) {
   const dispatch = useAppDispatch();
   const filters = useAppSelector((s) => s.filters);
   const range = activeRange(filters.fromDate, filters.toDate);
@@ -101,6 +102,26 @@ export function FilterChips({ members }: Props) {
           </Chip>
         ))}
       </div>
+
+      {categories.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto py-1">
+          <Chip
+            selected={filters.categoryId === null}
+            onClick={() => dispatch(filtersActions.setCategory(null))}
+          >
+            All categories
+          </Chip>
+          {categories.map((c) => (
+            <Chip
+              key={c.id}
+              selected={filters.categoryId === c.id}
+              onClick={() => dispatch(filtersActions.setCategory(c.id))}
+            >
+              {c.name}
+            </Chip>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
