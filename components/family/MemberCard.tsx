@@ -14,20 +14,23 @@ export type MemberCardData = {
 
 type Props = {
   member: MemberCardData;
-  onSaveDisplayName: (memberId: string, name: string) => Promise<void>;
+  onSaveDisplayName: (memberId: string, name: string) => Promise<string | undefined>;
   onRemove: (memberId: string) => Promise<void>;
 };
 
 export function MemberCard({ member, onSaveDisplayName, onRemove }: Props) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(member.display_name);
+  const [saveError, setSaveError] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
 
   const save = () => {
     const trimmed = name.trim();
     if (!trimmed || trimmed.length > 100) return;
+    setSaveError(undefined);
     startTransition(async () => {
-      await onSaveDisplayName(member.id, trimmed);
+      const error = await onSaveDisplayName(member.id, trimmed);
+      if (error) { setSaveError(error); return; }
       setEditing(false);
     });
   };
@@ -74,11 +77,14 @@ export function MemberCard({ member, onSaveDisplayName, onRemove }: Props) {
             maxLength={100}
             onChange={(e) => setName(e.target.value)}
           />
+          {saveError && (
+            <div className="text-[11px] text-red-500 mt-1">{saveError}</div>
+          )}
           <div className="flex gap-2 mt-2">
             <Button size="sm" onClick={save} disabled={pending}>
               Save
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setName(member.display_name); setEditing(false); }}>
+            <Button size="sm" variant="ghost" onClick={() => { setName(member.display_name); setSaveError(undefined); setEditing(false); }}>
               Cancel
             </Button>
           </div>

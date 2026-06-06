@@ -39,7 +39,7 @@ export function FamilyClient({ adults, kids, monthSpentOnKidsCents, monthLabel }
             <MemberCard
               key={a.id}
               member={a}
-              onSaveDisplayName={(id, name) => updateDisplayNameAction(id, name).then(() => undefined)}
+              onSaveDisplayName={(id, name) => updateDisplayNameAction(id, name).then((r) => r.error)}
               onRemove={(id) => removeMemberAction(id).then(() => undefined)}
             />
           ))}
