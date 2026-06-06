@@ -6,8 +6,34 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logExpenseSchema } from "@/lib/validators/transaction";
 
 export type LogExpenseState = { error: string | null };
+export type CreateCategoryResult =
+  | { ok: true; id: string; name: string }
+  | { ok: false; error: string };
 
 const CATEGORY_NAME_MAX = 100;
+
+export async function createExpenseCategoryAction(
+  name: string,
+): Promise<CreateCategoryResult> {
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Category name is required" };
+  if (trimmed.length > CATEGORY_NAME_MAX) {
+    return {
+      ok: false,
+      error: `Category name must be ${CATEGORY_NAME_MAX} characters or fewer`,
+    };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("ensure_category", {
+    p_name: trimmed,
+    p_kind: "expense",
+  });
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? "Could not create category" };
+  }
+  revalidatePath("/add");
+  return { ok: true, id: data as string, name: trimmed };
+}
 
 export async function logExpenseAction(
   _prev: LogExpenseState,
@@ -26,35 +52,16 @@ export async function logExpenseAction(
     if (categoryName.length > CATEGORY_NAME_MAX) {
       return { error: `Category name must be ${CATEGORY_NAME_MAX} characters or fewer` };
     }
-
-    const { data: householdId, error: hhErr } = await supabase.rpc("get_current_household");
-    if (hhErr || !householdId) {
-      return { error: hhErr?.message ?? "No active household" };
+    // `public.category` has no DML grant for authenticated; the RPC is the
+    // only way for clients to create a category.
+    const { data: ensuredId, error: ensureErr } = await supabase.rpc("ensure_category", {
+      p_name: categoryName,
+      p_kind: "expense",
+    });
+    if (ensureErr || !ensuredId) {
+      return { error: ensureErr?.message ?? "Could not create category" };
     }
-
-    // Race-safe find-or-create: another tab may have just created the same name.
-    const { data: existing } = await supabase
-      .from("category")
-      .select("id")
-      .eq("kind", "expense")
-      .eq("name", categoryName)
-      .or(`household_id.is.null,household_id.eq.${householdId}`)
-      .limit(1)
-      .maybeSingle();
-
-    if (existing?.id) {
-      categoryId = existing.id as string;
-    } else {
-      const { data: created, error: createErr } = await supabase
-        .from("category")
-        .insert({ household_id: householdId, name: categoryName, kind: "expense" })
-        .select("id")
-        .single();
-      if (createErr || !created) {
-        return { error: createErr?.message ?? "Could not create category" };
-      }
-      categoryId = created.id as string;
-    }
+    categoryId = ensuredId as string;
   }
 
   const parsed = logExpenseSchema.safeParse({

@@ -8,7 +8,7 @@ import { CategoryCombobox } from "@/components/transactions/CategoryCombobox";
 import { ForWhomChips } from "@/components/transactions/ForWhomChips";
 import { SplitSlider } from "@/components/transactions/SplitSlider";
 import { SplitRuleChips, type SplitRule } from "@/components/transactions/SplitRuleChips";
-import { logExpenseAction, type LogExpenseState } from "./actions";
+import { logExpenseAction, createExpenseCategoryAction, type LogExpenseState } from "./actions";
 
 const INITIAL: LogExpenseState = { error: null };
 
@@ -62,7 +62,11 @@ export function AddExpenseForm({ categories, members, todayIso }: Props) {
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-muted font-mono uppercase tracking-wider">Category</span>
-        <CategoryCombobox categories={categories} required />
+        <CategoryCombobox
+          categories={categories}
+          required
+          onCreate={createExpenseCategoryAction}
+        />
       </label>
 
       <label className="flex flex-col gap-1">

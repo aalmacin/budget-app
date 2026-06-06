@@ -16,18 +16,18 @@ export default async function AddIncomePage() {
     supabase.rpc("list_household_members"),
   ]);
 
-  type CategoryRow = { id: string; household_id: string | null; kind: string };
+  type CategoryRow = { id: string; kind: string };
   type MemberRow = { id: string; role: string; display_name: string };
 
-  const incomeSeed = ((categories ?? []) as CategoryRow[]).find(
-    (c) => c.kind === "income" && c.household_id === null,
+  const incomeCategory = ((categories ?? []) as CategoryRow[]).find(
+    (c) => c.kind === "income",
   );
   const adults: AdultOption[] = ((members ?? []) as MemberRow[])
     .filter((m) => m.role === "adult")
     .map((m) => ({ id: m.id, display_name: m.display_name }));
 
   const today = new Date().toISOString().slice(0, 10);
-  const incomeCategoryId = incomeSeed?.id ?? null;
+  const incomeCategoryId = incomeCategory?.id ?? null;
 
   return (
     <div className="pt-3">
