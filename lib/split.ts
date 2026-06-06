@@ -20,8 +20,8 @@ export type SplitRule = "adult_a" | "adult_b" | "50_50" | "by_income";
 export type Adult = {
   /** household_member.id */
   id: string;
-  /** Monthly net income in whole cents. Zero is allowed. */
-  monthlyIncomeCents: bigint;
+  /** Rolling 12-month income sum in whole cents from income transactions. Zero is allowed. */
+  incomeCents: bigint;
   /**
    * Display order — 1-indexed, derived from row_number() over
    * (order by created_at, id). Used as the tie-breaker for residual cent
@@ -45,7 +45,7 @@ export function computeIncomeSplit(
 ): { adultId: string; numerator: bigint; denominator: bigint }[] {
   if (adults.length === 0) return [];
   const total = adults.reduce(
-    (acc, a) => acc + a.monthlyIncomeCents,
+    (acc, a) => acc + a.incomeCents,
     0n,
   );
   if (total === 0n) {
@@ -58,7 +58,7 @@ export function computeIncomeSplit(
   }
   return adults.map((a) => ({
     adultId: a.id,
-    numerator: a.monthlyIncomeCents,
+    numerator: a.incomeCents,
     denominator: total,
   }));
 }
@@ -112,7 +112,7 @@ export function applySplitRule(
         numerator: ratios[i].numerator,
         denominator: ratios[i].denominator,
         adultId: a.id,
-        income: a.monthlyIncomeCents,
+        income: a.incomeCents,
         displayOrder: a.displayOrder,
       }));
     }
