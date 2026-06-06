@@ -4,34 +4,30 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { FamilyAvatar } from "@/components/ui/FamilyAvatar";
-import { formatCAD, centsToDollars } from "@/lib/money";
 
 export type MemberCardData = {
   id: string;
   display_name: string;
   role: "adult" | "kid";
   age_years: number | null;
-  monthly_income_cents: bigint;
 };
 
 type Props = {
   member: MemberCardData;
-  /** Called when the user saves a new income for an adult. */
-  onSaveIncome: (memberId: string, cents: bigint) => Promise<void>;
-  /** Called when the user removes the member. */
+  onSaveDisplayName: (memberId: string, name: string) => Promise<void>;
   onRemove: (memberId: string) => Promise<void>;
 };
 
-export function MemberCard({ member, onSaveIncome, onRemove }: Props) {
+export function MemberCard({ member, onSaveDisplayName, onRemove }: Props) {
   const [editing, setEditing] = useState(false);
-  const [income, setIncome] = useState(centsToDollars(member.monthly_income_cents).toFixed(2));
+  const [name, setName] = useState(member.display_name);
   const [pending, startTransition] = useTransition();
 
   const save = () => {
-    const n = Number(income);
-    if (!Number.isFinite(n) || n < 0) return;
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length > 100) return;
     startTransition(async () => {
-      await onSaveIncome(member.id, BigInt(Math.round(n * 100)));
+      await onSaveDisplayName(member.id, trimmed);
       setEditing(false);
     });
   };
@@ -49,11 +45,11 @@ export function MemberCard({ member, onSaveIncome, onRemove }: Props) {
       />
       <div className="flex-1 min-w-0">
         <div className="text-sm text-ink truncate">{member.display_name}</div>
-        <div className="text-[11px] text-faint">
-          {member.role === "adult"
-            ? `Income ${formatCAD(member.monthly_income_cents).replace("CA$", "$")}/mo`
-            : `${member.age_years ?? "?"} years old`}
-        </div>
+        {member.role === "kid" && (
+          <div className="text-[11px] text-faint">
+            {member.age_years ?? "?"} years old
+          </div>
+        )}
       </div>
       {member.role === "adult" && !editing && (
         <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
@@ -71,13 +67,12 @@ export function MemberCard({ member, onSaveIncome, onRemove }: Props) {
       </Button>
       {editing && (
         <div className="absolute inset-x-4 mt-32 bg-surface rounded-2xl p-3 shadow-lg">
-          <label className="text-xs text-muted font-mono uppercase">Monthly income</label>
+          <label className="text-xs text-muted font-mono uppercase">Display name</label>
           <Input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            value={income}
-            onChange={(e) => setIncome(e.target.value)}
+            type="text"
+            value={name}
+            maxLength={100}
+            onChange={(e) => setName(e.target.value)}
           />
           <div className="flex gap-2 mt-2">
             <Button size="sm" onClick={save} disabled={pending}>
