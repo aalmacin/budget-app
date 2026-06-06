@@ -74,21 +74,6 @@ export function AddExpenseForm({ categories, members, todayIso }: Props) {
         <Input type="text" name="notes" maxLength={200} placeholder="e.g. Whole Foods" />
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-muted font-mono uppercase tracking-wider">Paid by</span>
-        <select
-          name="paid_by_member_id"
-          className="w-full h-12 px-4 rounded-2xl bg-surface text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-sage/40"
-        >
-          <option value="">— select —</option>
-          {members.filter((m) => m.role === "adult").map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.display_name}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <div className="flex flex-col gap-1.5">
         <span className="text-xs text-muted font-mono uppercase tracking-wider">For whom</span>
         <ForWhomChips
@@ -118,6 +103,20 @@ export function AddExpenseForm({ categories, members, todayIso }: Props) {
           adultALabel={`${adultA} 100%`}
           adultBLabel={`${adultB} 100%`}
           asFormField
+        />
+        {/* paid_by_member_id is derived from the split rule: adult_a/adult_b
+            uniquely identify the payer; 50_50 / by_income are shared so we
+            leave it null. */}
+        <input
+          type="hidden"
+          name="paid_by_member_id"
+          value={
+            splitRule === "adult_a"
+              ? adults[0]?.id ?? ""
+              : splitRule === "adult_b"
+                ? adults[1]?.id ?? ""
+                : ""
+          }
         />
       </div>
 

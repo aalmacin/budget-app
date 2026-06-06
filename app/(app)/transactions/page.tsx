@@ -15,7 +15,9 @@ export default async function TransactionsPage() {
 
   // Principle III: clients call RPCs, never `.from()` against household tables.
   const [{ data: initial }, { data: membersData }] = await Promise.all([
-    supabase.rpc("list_transactions", { p_filters: { limit: 100 } }),
+    supabase.rpc("list_transactions", {
+      p_filters: { limit: 50, offset: 0 },
+    }),
     supabase.rpc("list_household_members"),
   ]);
 
