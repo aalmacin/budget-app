@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { computeIncomeSplit, applySplitRule, type Adult } from "@/lib/split";
 
-const alex: Adult = { id: "alex", monthlyIncomeCents: 580_000n, displayOrder: 1 };
-const bea:  Adult = { id: "bea",  monthlyIncomeCents: 248_500n, displayOrder: 2 };
+const alex: Adult = { id: "alex", incomeCents: 580_000n, displayOrder: 1 };
+const bea:  Adult = { id: "bea",  incomeCents: 248_500n, displayOrder: 2 };
 
 describe("lib/split", () => {
   describe("computeIncomeSplit", () => {
@@ -14,8 +14,8 @@ describe("lib/split", () => {
     });
     it("falls back to 1/n when total income is zero", () => {
       const zero: Adult[] = [
-        { id: "a", monthlyIncomeCents: 0n, displayOrder: 1 },
-        { id: "b", monthlyIncomeCents: 0n, displayOrder: 2 },
+        { id: "a", incomeCents: 0n, displayOrder: 1 },
+        { id: "b", incomeCents: 0n, displayOrder: 2 },
       ];
       const ratios = computeIncomeSplit(zero);
       expect(ratios.every((r) => r.numerator === 1n && r.denominator === 2n)).toBe(true);
@@ -47,8 +47,8 @@ describe("lib/split", () => {
 
     it("by_income zero-income fallback: equal split, residual to display-order Adult A", () => {
       const zero: Adult[] = [
-        { id: "a", monthlyIncomeCents: 0n, displayOrder: 1 },
-        { id: "b", monthlyIncomeCents: 0n, displayOrder: 2 },
+        { id: "a", incomeCents: 0n, displayOrder: 1 },
+        { id: "b", incomeCents: 0n, displayOrder: 2 },
       ];
       const shares = applySplitRule(3n, "by_income", zero);
       expect(shares.find((s) => s.adultId === "a")!.owedCents).toBe(2n);
