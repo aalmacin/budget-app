@@ -9,42 +9,31 @@ export const metadata = { title: "Settings · Budget" };
 export const dynamic = "force-dynamic";
 
 type SplitRow = { adult_id: string; ratio: number | string; display_order: number };
-type MemberRow = { id: string; display_name: string; monthly_income_cents: number | string };
+type MemberRow = { id: string; display_name: string; monthly_income_cents: number | string; role?: string };
 type CategoryRow = { id: string; name: string; default_essential_pct: number };
 
 export default async function SettingsPage() {
   const supabase = await createSupabaseServerClient();
 
-  const { data: membership } = await supabase
-    .from("household_member")
-    .select("household_id")
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
+  // Principle III: clients call RPCs, never `.from()` against household tables.
+  const { data: householdId } = await supabase.rpc("get_current_household");
 
-  const householdId = membership?.household_id as string | undefined;
-
-  const [{ data: splitData }, { data: adultsData }, { data: categoriesData }] =
+  const [{ data: splitData }, { data: membersData }, { data: categoriesData }] =
     await Promise.all([
       householdId
         ? supabase.rpc("compute_income_split", { p_household_id: householdId })
         : Promise.resolve({ data: null }),
-      supabase
-        .from("household_member")
-        .select("id, display_name, monthly_income_cents")
-        .eq("role", "adult")
-        .is("deleted_at", null)
-        .order("created_at"),
-      supabase
-        .from("category")
-        .select("id, name, default_essential_pct")
-        .eq("kind", "expense")
-        .order("name"),
+      supabase.rpc("list_household_members"),
+      supabase.rpc("list_categories", { p_kind: "expense" }),
     ]);
 
-  const adults: MemberRow[] = (adultsData ?? []) as MemberRow[];
+  const adults: MemberRow[] = ((membersData ?? []) as MemberRow[]).filter(
+    (m) => m.role === "adult",
+  );
   const split: SplitRow[] = (splitData ?? []) as SplitRow[];
-  const categories: CategoryRule[] = (categoriesData ?? []) as CategoryRow[];
+  const categories: CategoryRule[] = ((categoriesData ?? []) as CategoryRow[])
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const adultName = (id: string) =>
     adults.find((a) => a.id === id)?.display_name ?? "Adult";

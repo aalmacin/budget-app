@@ -26,33 +26,32 @@ type RawOverlap = {
 export default async function SubscriptionsPage() {
   const supabase = await createSupabaseServerClient();
 
+  // Principle III: clients call RPCs, never `.from()` against household tables.
   const [{ data: subsData }, { data: overlapData }, { data: categoriesData }] =
     await Promise.all([
-      supabase
-        .from("subscription")
-        .select("id, merchant, amount_cents, cadence, next_renewal_at, active, category_id")
-        .order("next_renewal_at"),
+      supabase.rpc("list_subscriptions"),
       supabase.rpc("list_overlapping_subscriptions"),
-      supabase
-        .from("category")
-        .select("id, name")
-        .eq("kind", "expense")
-        .order("name"),
+      supabase.rpc("list_categories", { p_kind: "expense" }),
     ]);
 
+  type RawCategory = { id: string; name: string };
+  const categoryRows = (categoriesData ?? []) as RawCategory[];
   const categoryMap = new Map<string, string>(
-    (categoriesData ?? []).map((c) => [c.id as string, c.name as string]),
+    categoryRows.map((c) => [c.id, c.name]),
   );
 
-  const subscriptions: SubscriptionRow[] = ((subsData ?? []) as RawSub[]).map((s) => ({
-    id: s.id,
-    merchant: s.merchant,
-    amount_cents: BigInt(typeof s.amount_cents === "string" ? s.amount_cents : s.amount_cents),
-    cadence: s.cadence,
-    next_renewal_at: s.next_renewal_at,
-    active: s.active,
-    category_name: categoryMap.get(s.category_id) ?? "—",
-  }));
+  const subscriptions: SubscriptionRow[] = ((subsData ?? []) as RawSub[])
+    .slice()
+    .sort((a, b) => a.next_renewal_at.localeCompare(b.next_renewal_at))
+    .map((s) => ({
+      id: s.id,
+      merchant: s.merchant,
+      amount_cents: BigInt(typeof s.amount_cents === "string" ? s.amount_cents : s.amount_cents),
+      cadence: s.cadence,
+      next_renewal_at: s.next_renewal_at,
+      active: s.active,
+      category_name: categoryMap.get(s.category_id) ?? "—",
+    }));
 
   const overlaps: Overlap[] = ((overlapData ?? []) as RawOverlap[]).map((o) => ({
     category_name: o.category_name,
@@ -60,10 +59,10 @@ export default async function SubscriptionsPage() {
     monthly_total_cents: BigInt(typeof o.monthly_total_cents === "string" ? o.monthly_total_cents : o.monthly_total_cents),
   }));
 
-  const categories = (categoriesData ?? []).map((c) => ({
-    id: c.id as string,
-    name: c.name as string,
-  }));
+  const categories = categoryRows
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((c) => ({ id: c.id, name: c.name }));
 
   return (
     <div className="pt-3 pb-16">

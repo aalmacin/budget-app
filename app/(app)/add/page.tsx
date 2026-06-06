@@ -9,27 +9,22 @@ export const metadata = { title: "Add expense · Budget" };
 export default async function AddExpensePage() {
   const supabase = await createSupabaseServerClient();
 
+  // Principle III: clients call RPCs, never `.from()` against household tables.
   const [{ data: categoriesData }, { data: membersData }] = await Promise.all([
-    supabase
-      .from("category")
-      .select("id, name")
-      .eq("kind", "expense")
-      .order("name"),
-    supabase
-      .from("household_member")
-      .select("id, display_name, role")
-      .is("deleted_at", null)
-      .order("created_at"),
+    supabase.rpc("list_categories", { p_kind: "expense" }),
+    supabase.rpc("list_household_members"),
   ]);
 
-  const categories: CategoryOption[] = (categoriesData ?? []).map((c) => ({
-    id: c.id as string,
-    name: c.name as string,
-  }));
-  const members: MemberOption[] = (membersData ?? []).map((m) => ({
-    id: m.id as string,
-    display_name: m.display_name as string,
-    role: m.role as "adult" | "kid",
+  type CategoryRow = { id: string; name: string };
+  type MemberRow = { id: string; display_name: string; role: "adult" | "kid" };
+
+  const categories: CategoryOption[] = ((categoriesData ?? []) as CategoryRow[])
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((c) => ({ id: c.id, name: c.name }));
+  const members: MemberOption[] = ((membersData ?? []) as MemberRow[]).map((m) => ({
+    id: m.id,
+    display_name: m.display_name,
+    role: m.role,
   }));
 
   const today = new Date().toISOString().slice(0, 10);

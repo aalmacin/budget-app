@@ -13,18 +13,16 @@ export const dynamic = "force-dynamic";
 export default async function TransactionsPage() {
   const supabase = await createSupabaseServerClient();
 
+  // Principle III: clients call RPCs, never `.from()` against household tables.
   const [{ data: initial }, { data: membersData }] = await Promise.all([
     supabase.rpc("list_transactions", { p_filters: { limit: 100 } }),
-    supabase
-      .from("household_member")
-      .select("id, display_name")
-      .is("deleted_at", null)
-      .order("created_at"),
+    supabase.rpc("list_household_members"),
   ]);
 
-  const members = (membersData ?? []).map((m) => ({
-    id: m.id as string,
-    display_name: m.display_name as string,
+  type MemberRow = { id: string; display_name: string };
+  const members = ((membersData ?? []) as MemberRow[]).map((m) => ({
+    id: m.id,
+    display_name: m.display_name,
   }));
 
   return (
