@@ -9,7 +9,7 @@ import {
   addAdultAction,
   addKidAction,
   removeMemberAction,
-  updateIncomeAction,
+  updateDisplayNameAction,
 } from "./actions";
 
 type Props = {
@@ -22,7 +22,6 @@ type Props = {
 export function FamilyClient({ adults, kids, monthSpentOnKidsCents, monthLabel }: Props) {
   return (
     <div className="flex flex-col gap-4">
-      {/* Sage "Spent on kids · <month>" hero */}
       <div className="mx-4 mt-2 rounded-3xl bg-sage text-white p-5 shadow-sm">
         <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-white/70">
           Spent on kids · {monthLabel}
@@ -40,7 +39,7 @@ export function FamilyClient({ adults, kids, monthSpentOnKidsCents, monthLabel }
             <MemberCard
               key={a.id}
               member={a}
-              onSaveIncome={(id, cents) => updateIncomeAction(id, cents).then(() => undefined)}
+              onSaveDisplayName={(id, name) => updateDisplayNameAction(id, name).then(() => undefined)}
               onRemove={(id) => removeMemberAction(id).then(() => undefined)}
             />
           ))}
