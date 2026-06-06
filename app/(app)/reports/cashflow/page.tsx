@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCAD } from "@/lib/money";
+import { RangeSelector, type ReportRange } from "@/components/reports/RangeSelector";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Cashflow · Budget" };
@@ -14,20 +15,38 @@ type KPIs = {
   insights: string[];
 };
 
+const VALID_RANGES: ReportRange[] = ["30d", "90d", "ytd"];
+
+const RANGE_LABELS: Record<ReportRange, string> = {
+  "30d": "30d",
+  "90d": "90d",
+  ytd: "YTD",
+};
+
 function toBig(v: number | string): bigint {
   return BigInt(typeof v === "string" ? v : Math.trunc(v));
 }
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const sp = await searchParams;
+  const range: ReportRange = VALID_RANGES.includes(sp.range as ReportRange)
+    ? (sp.range as ReportRange)
+    : "30d";
+
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.rpc("cashflow_kpis", { p_range: "30d" });
+  const { data } = await supabase.rpc("cashflow_kpis", { p_range: range });
   const kpi = (data ?? {}) as Partial<KPIs>;
 
   return (
     <div className="px-4 space-y-3">
+      <RangeSelector current={range} />
       <div className="grid grid-cols-2 gap-3">
-        <Stat label="Income (30d)" value={formatCAD(toBig(kpi.income_cents ?? 0))} />
-        <Stat label="Expense (30d)" value={formatCAD(toBig(kpi.expense_cents ?? 0))} />
+        <Stat label={`Income (${RANGE_LABELS[range]})`} value={formatCAD(toBig(kpi.income_cents ?? 0))} />
+        <Stat label={`Expense (${RANGE_LABELS[range]})`} value={formatCAD(toBig(kpi.expense_cents ?? 0))} />
         <Stat label="Net" value={formatCAD(toBig(kpi.net_cents ?? 0))} />
         <Stat label="Avg daily" value={formatCAD(toBig(kpi.avg_daily_spend_cents ?? 0))} />
       </div>
