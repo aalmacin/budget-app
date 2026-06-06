@@ -14,7 +14,6 @@ type RawMember = {
   display_name: string;
   role: "adult" | "kid";
   age_years: number | null;
-  monthly_income_cents: number | string;
 };
 
 export default async function FamilyPage() {
@@ -41,9 +40,6 @@ export default async function FamilyPage() {
       display_name: m.display_name,
       role: "adult",
       age_years: null,
-      monthly_income_cents: BigInt(
-        typeof m.monthly_income_cents === "string" ? m.monthly_income_cents : m.monthly_income_cents,
-      ),
     }));
 
   const kidsBase = members.filter((m) => m.role === "kid");
