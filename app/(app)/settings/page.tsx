@@ -9,7 +9,7 @@ export const metadata = { title: "Settings · Budget" };
 export const dynamic = "force-dynamic";
 
 type SplitRow = { adult_id: string; ratio: number | string; display_order: number };
-type MemberRow = { id: string; display_name: string; monthly_income_cents: number | string; role?: string };
+type MemberRow = { id: string; display_name: string; role?: string };
 type CategoryRow = { id: string; name: string; default_essential_pct: number };
 
 export default async function SettingsPage() {
@@ -59,7 +59,7 @@ export default async function SettingsPage() {
             Income-split rule
           </div>
           {split.length === 0 ? (
-            <p className="text-sm text-muted mt-2">Add adults and incomes first.</p>
+            <p className="text-sm text-muted mt-2">Add income transactions first.</p>
           ) : (
             <ul className="mt-2 space-y-1">
               {split.map((r) => (
