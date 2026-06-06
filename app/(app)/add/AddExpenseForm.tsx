@@ -15,20 +15,54 @@ const INITIAL: LogExpenseState = { error: null };
 
 export type CategoryOption = { id: string; name: string };
 export type MemberOption = { id: string; display_name: string; role: "adult" | "kid" };
+export type ExpenseTemplate = {
+  id: string;
+  merchant: string;
+  amount_cents: bigint;
+  category_id: string;
+  category_name: string;
+  paid_by_member_id: string | null;
+  for_member_id: string | null;
+  essential_pct: number;
+  split_rule: SplitRule | null;
+};
 
 type Props = {
   categories: CategoryOption[];
   members: MemberOption[];
   merchants: string[];
   todayIso: string;
+  template: ExpenseTemplate | null;
 };
 
-export function AddExpenseForm({ categories, members, merchants, todayIso }: Props) {
+function centsToDollars(cents: bigint): string {
+  const n = Number(cents) / 100;
+  return n.toFixed(2);
+}
+
+export function AddExpenseForm({
+  categories,
+  members,
+  merchants,
+  todayIso,
+  template,
+}: Props) {
   const [state, formAction, pending] = useActionState(logExpenseAction, INITIAL);
-  const [amount, setAmount] = useState("0.00");
-  const [forMember, setForMember] = useState<string | null>(null);
-  const [essentialPct, setEssentialPct] = useState<number>(100);
-  const [splitRule, setSplitRule] = useState<SplitRule | null>(null);
+  const [amount, setAmount] = useState(
+    template ? centsToDollars(template.amount_cents) : "0.00",
+  );
+  const [forMember, setForMember] = useState<string | null>(
+    template?.for_member_id ?? null,
+  );
+  const [essentialPct, setEssentialPct] = useState<number>(
+    template?.essential_pct ?? 100,
+  );
+  const [splitRule, setSplitRule] = useState<SplitRule | null>(
+    template?.split_rule ?? null,
+  );
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [overrideTemplate, setOverrideTemplate] = useState(false);
+
   const adults = members.filter((m) => m.role === "adult");
   const adultA = adults[0]?.display_name ?? "Adult A";
   const adultB = adults[1]?.display_name ?? "Adult B";
@@ -67,13 +101,14 @@ export function AddExpenseForm({ categories, members, merchants, todayIso }: Pro
         <CategoryCombobox
           categories={categories}
           required
+          defaultValue={template?.category_name ?? ""}
           onCreate={createExpenseCategoryAction}
         />
       </label>
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-muted font-mono uppercase tracking-wider">Merchant / notes</span>
-        <MerchantCombobox merchants={merchants} />
+        <MerchantCombobox merchants={merchants} defaultValue={template?.merchant ?? ""} />
       </label>
 
       <div className="flex flex-col gap-1.5">
@@ -121,6 +156,33 @@ export function AddExpenseForm({ categories, members, merchants, todayIso }: Pro
           }
         />
       </div>
+
+      {template ? (
+        <>
+          <input type="hidden" name="template_id" value={template.id} />
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              name="override_template"
+              checked={overrideTemplate}
+              onChange={(e) => setOverrideTemplate(e.target.checked)}
+              className="h-4 w-4"
+            />
+            Override saved values for &ldquo;{template.merchant}&rdquo;
+          </label>
+        </>
+      ) : (
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            name="save_as_template"
+            checked={saveAsTemplate}
+            onChange={(e) => setSaveAsTemplate(e.target.checked)}
+            className="h-4 w-4"
+          />
+          Save as template
+        </label>
+      )}
 
       {state.error && (
         <p role="alert" className="text-sm text-brick">

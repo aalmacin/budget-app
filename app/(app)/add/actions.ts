@@ -83,7 +83,44 @@ export async function logExpenseAction(
   });
   if (error) return { error: error.message };
 
+  // Template side-effects. These are best-effort: the expense is already
+  // logged, so a failure here surfaces an inline error but does not roll back.
+  const templateId = ((raw.template_id as string | undefined) ?? "").trim();
+  const overrideTemplate = raw.override_template === "on";
+  const saveAsTemplate = raw.save_as_template === "on";
+  const merchant = (parsed.data.notes ?? "").trim();
+
+  if (templateId && overrideTemplate) {
+    const { error: updErr } = await supabase.rpc("update_saved_expense", {
+      p_id: templateId,
+      p: {
+        merchant: merchant || "Saved expense",
+        amount_cents: parsed.data.amount_cents.toString(),
+        category_id: parsed.data.category_id,
+        paid_by_member_id: parsed.data.paid_by_member_id ?? null,
+        for_member_id: parsed.data.for_member_id ?? null,
+        essential_pct: parsed.data.essential_pct ?? 100,
+        split_rule: parsed.data.split_rule ?? null,
+      },
+    });
+    if (updErr) return { error: updErr.message };
+  } else if (!templateId && saveAsTemplate) {
+    const { error: createErr } = await supabase.rpc("create_saved_expense", {
+      p: {
+        merchant: merchant || "Saved expense",
+        amount_cents: parsed.data.amount_cents.toString(),
+        category_id: parsed.data.category_id,
+        paid_by_member_id: parsed.data.paid_by_member_id ?? null,
+        for_member_id: parsed.data.for_member_id ?? null,
+        essential_pct: parsed.data.essential_pct ?? 100,
+        split_rule: parsed.data.split_rule ?? null,
+      },
+    });
+    if (createErr) return { error: createErr.message };
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
+  revalidatePath("/quick-add");
   redirect("/dashboard");
 }

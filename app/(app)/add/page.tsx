@@ -2,12 +2,34 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { AppBar } from "@/components/ui/AppBar";
 import { MenuButton } from "@/components/layout/AppDrawer";
-import { AddExpenseForm, type CategoryOption, type MemberOption } from "./AddExpenseForm";
+import {
+  AddExpenseForm,
+  type CategoryOption,
+  type MemberOption,
+  type ExpenseTemplate,
+} from "./AddExpenseForm";
 
 export const metadata = { title: "Add expense · Budget" };
 
-export default async function AddExpensePage() {
+type RawTemplate = {
+  id: string;
+  merchant: string;
+  amount_cents: number | string;
+  category_id: string;
+  paid_by_member_id: string | null;
+  for_member_id: string | null;
+  essential_pct: number;
+  split_rule: "adult_a" | "adult_b" | "50_50" | "by_income" | null;
+};
+
+export default async function AddExpensePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ template?: string }>;
+}) {
   const supabase = await createSupabaseServerClient();
+  const sp = await searchParams;
+  const templateId = sp.template ?? null;
 
   // Principle III: clients call RPCs, never `.from()` against household tables.
   const [{ data: categoriesData }, { data: membersData }, { data: merchantsData }] =
@@ -33,17 +55,50 @@ export default async function AddExpensePage() {
     .map((m) => m.name)
     .filter(Boolean);
 
+  let template: ExpenseTemplate | null = null;
+  if (templateId) {
+    const { data: tplRows } = await supabase.rpc("get_saved_expense", {
+      p_id: templateId,
+    });
+    const tplData = ((tplRows ?? []) as RawTemplate[])[0] ?? null;
+    if (tplData) {
+      // Bump MRU so the tile sorts to the top next time Quick Add loads.
+      await supabase.rpc("touch_saved_expense", { p_id: templateId });
+      const categoryName =
+        categories.find((c) => c.id === tplData.category_id)?.name ?? "";
+      template = {
+        id: tplData.id,
+        merchant: tplData.merchant,
+        amount_cents: BigInt(
+          typeof tplData.amount_cents === "string"
+            ? tplData.amount_cents
+            : Math.trunc(tplData.amount_cents),
+        ),
+        category_id: tplData.category_id,
+        category_name: categoryName,
+        paid_by_member_id: tplData.paid_by_member_id,
+        for_member_id: tplData.for_member_id,
+        essential_pct: tplData.essential_pct,
+        split_rule: tplData.split_rule,
+      };
+    }
+  }
+
   const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="pt-3">
       <AppBar left={<MenuButton />} />
-      <PageTitle title="Add expense" subtitle="Money out" />
+      <PageTitle
+        title={template ? `Add expense (from ${template.merchant})` : "Add expense"}
+        subtitle="Money out"
+      />
       <AddExpenseForm
         categories={categories}
         members={members}
         merchants={merchants}
         todayIso={today}
+        template={template}
       />
     </div>
   );
