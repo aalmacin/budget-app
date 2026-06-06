@@ -12,18 +12,38 @@ type RawTxn = {
   id: string;
   type: "expense" | "income";
   amount_cents: number | string;
+  category_id: string | null;
   category_name: string;
   notes: string;
+  for_member_id: string | null;
   for_member_display_name: string | null;
+  paid_by_member_id: string | null;
+  paid_by_display_name: string | null;
+  split_rule: string | null;
+  income_source: string | null;
   occurred_on: string;
   essential_pct: number;
-  paid_by_display_name: string | null;
   total_count: number | string;
 };
 
 type RowWithPaid = ActivityRowData & {
   essential_pct: number;
   paid_by_display_name: string | null;
+  category_id: string | null;
+  for_member_id: string | null;
+  paid_by_member_id: string | null;
+  split_rule: string | null;
+  income_source: string | null;
+};
+
+export type CategoryOption = { id: string; name: string };
+export type MemberOption = { id: string; display_name: string; role: "adult" | "kid" };
+
+type Props = {
+  initial: RawTxn[];
+  members: MemberOption[];
+  expenseCategories: CategoryOption[];
+  merchants: string[];
 };
 
 const PAGE_SIZE = 50;
@@ -39,6 +59,11 @@ function toRows(data: RawTxn[]): RowWithPaid[] {
     occurred_on: r.occurred_on,
     essential_pct: r.essential_pct,
     paid_by_display_name: r.paid_by_display_name,
+    category_id: r.category_id,
+    for_member_id: r.for_member_id,
+    paid_by_member_id: r.paid_by_member_id,
+    split_rule: r.split_rule,
+    income_source: r.income_source,
   }));
 }
 
@@ -48,7 +73,12 @@ function totalFrom(data: RawTxn[]): number {
   return typeof v === "string" ? Number(v) : v;
 }
 
-export function TransactionsList({ initial }: { initial: RawTxn[] }) {
+export function TransactionsList({
+  initial,
+  members,
+  expenseCategories,
+  merchants,
+}: Props) {
   const [rows, setRows] = useState<RowWithPaid[]>(toRows(initial));
   const [total, setTotal] = useState<number>(totalFrom(initial));
   const [page, setPage] = useState(0);
@@ -95,18 +125,10 @@ export function TransactionsList({ initial }: { initial: RawTxn[] }) {
 
   const handleSave = async (
     id: string,
-    patch: { amount_cents: bigint; notes: string; essential_pct: number; occurred_on: string },
+    patch: Record<string, string | number | null>,
   ) => {
     const supabase = getSupabaseBrowserClient();
-    await supabase.rpc("update_transaction", {
-      p_id: id,
-      p_patch: {
-        amount_cents: patch.amount_cents.toString(),
-        notes: patch.notes,
-        essential_pct: patch.essential_pct,
-        occurred_on: patch.occurred_on,
-      },
-    });
+    await supabase.rpc("update_transaction", { p_id: id, p_patch: patch });
     await fetchPage(page);
   };
 
@@ -157,6 +179,12 @@ export function TransactionsList({ initial }: { initial: RawTxn[] }) {
                       notes: r.notes,
                       essential_pct: r.essential_pct,
                       occurred_on: r.occurred_on,
+                      category_id: r.category_id,
+                      category_name: r.category_name,
+                      for_member_id: r.for_member_id,
+                      paid_by_member_id: r.paid_by_member_id,
+                      split_rule: r.split_rule,
+                      income_source: r.income_source,
                     })
                   }
                 />
@@ -207,6 +235,9 @@ export function TransactionsList({ initial }: { initial: RawTxn[] }) {
 
       <EditTxnSheet
         txn={editing}
+        members={members}
+        expenseCategories={expenseCategories}
+        merchants={merchants}
         onClose={() => setEditing(null)}
         onSave={handleSave}
         onDelete={handleDelete}
