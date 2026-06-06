@@ -66,7 +66,7 @@ export function MemberCard({ member, onSaveDisplayName, onRemove }: Props) {
         Remove
       </Button>
       {editing && (
-        <div className="absolute inset-x-4 mt-32 bg-surface rounded-2xl p-3 shadow-lg">
+        <div className="absolute inset-x-4 mt-32 z-10 bg-surface rounded-2xl p-3 shadow-lg">
           <label className="text-xs text-muted font-mono uppercase">Display name</label>
           <Input
             type="text"
