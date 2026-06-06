@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AmountHero } from "@/components/ui/AmountHero";
 import { CategoryCombobox } from "@/components/transactions/CategoryCombobox";
+import { MerchantCombobox } from "@/components/transactions/MerchantCombobox";
 import { ForWhomChips } from "@/components/transactions/ForWhomChips";
 import { SplitSlider } from "@/components/transactions/SplitSlider";
 import { SplitRuleChips, type SplitRule } from "@/components/transactions/SplitRuleChips";
@@ -18,10 +19,11 @@ export type MemberOption = { id: string; display_name: string; role: "adult" | "
 type Props = {
   categories: CategoryOption[];
   members: MemberOption[];
+  merchants: string[];
   todayIso: string;
 };
 
-export function AddExpenseForm({ categories, members, todayIso }: Props) {
+export function AddExpenseForm({ categories, members, merchants, todayIso }: Props) {
   const [state, formAction, pending] = useActionState(logExpenseAction, INITIAL);
   const [amount, setAmount] = useState("0.00");
   const [forMember, setForMember] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export function AddExpenseForm({ categories, members, todayIso }: Props) {
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-muted font-mono uppercase tracking-wider">Merchant / notes</span>
-        <Input type="text" name="notes" maxLength={200} placeholder="e.g. Whole Foods" />
+        <MerchantCombobox merchants={merchants} />
       </label>
 
       <div className="flex flex-col gap-1.5">
