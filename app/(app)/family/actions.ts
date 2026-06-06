@@ -38,14 +38,16 @@ export async function removeMemberAction(memberId: string): Promise<{ error?: st
   return {};
 }
 
-export async function updateIncomeAction(memberId: string, monthlyIncomeCents: bigint): Promise<{ error?: string }> {
+export async function updateDisplayNameAction(
+  memberId: string,
+  displayName: string,
+): Promise<{ error?: string }> {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("update_member_income", {
+  const { error } = await supabase.rpc("update_member_display_name", {
     p_member_id: memberId,
-    p_monthly_income_cents: monthlyIncomeCents.toString(),
+    p_display_name: displayName,
   });
   if (error) return { error: error.message };
   revalidatePath("/family");
-  revalidatePath("/settings");
   return {};
 }
