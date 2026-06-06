@@ -32,6 +32,10 @@ ALTER FUNCTION public.update_member_display_name(UUID, TEXT) OWNER TO budget_fun
 REVOKE ALL ON FUNCTION public.update_member_display_name(UUID, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.update_member_display_name(UUID, TEXT) TO authenticated;
 
+-- DROP required because the return type adds a new column (income_cents);
+-- CREATE OR REPLACE cannot change an existing function's return type.
+DROP FUNCTION IF EXISTS public.compute_income_split(uuid);
+
 CREATE OR REPLACE FUNCTION public.compute_income_split(p_household_id uuid)
 RETURNS TABLE(adult_id uuid, ratio numeric(10,8), display_order int, income_cents bigint)
 LANGUAGE sql
