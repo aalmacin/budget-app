@@ -127,9 +127,11 @@ export function AddExpenseForm({ categories, members, merchants, todayIso }: Pro
           {state.error}
         </p>
       )}
-      <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Saving…" : "Save expense"}
-      </Button>
+      <div className="sticky bottom-3 mt-2 -mx-4 px-4 pt-2 pb-3 bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/80 z-10">
+        <Button type="submit" size="lg" disabled={pending} className="w-full">
+          {pending ? "Saving…" : "Save expense"}
+        </Button>
+      </div>
     </form>
   );
 }
