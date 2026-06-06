@@ -43,18 +43,14 @@ export default async function DashboardPage() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [{ data: summaryData }, { data: membership }] = await Promise.all([
+  // Principle III: clients call RPCs, never `.from()` against household tables.
+  const [{ data: summaryData }, { data: householdIdRaw }] = await Promise.all([
     supabase.rpc("get_dashboard_summary", { p_year: year, p_month: month }),
-    supabase
-      .from("household_member")
-      .select("household_id")
-      .is("deleted_at", null)
-      .limit(1)
-      .maybeSingle(),
+    supabase.rpc("get_current_household"),
   ]);
 
   const summary = (summaryData ?? {}) as Partial<DashboardSummary>;
-  const householdId = membership?.household_id as string | undefined;
+  const householdId = (householdIdRaw as string | null) ?? undefined;
 
   const leftToSpend = toBig(summary.left_to_spend_this_month_cents);
   const balance = toBig(summary.balance_cents);
