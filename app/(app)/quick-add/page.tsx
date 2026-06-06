@@ -7,24 +7,38 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/icons";
 import { QuickAddTabs } from "./QuickAddTabs";
 import type { QuickAddTileData } from "@/components/quick-add/QuickAddTile";
+import type { SavedTileData } from "@/components/quick-add/SavedTilesGrid";
 
 export const metadata = { title: "Quick Add · Budget" };
 export const dynamic = "force-dynamic";
 
-type RawOption = Omit<QuickAddTileData, "amount_cents"> & {
+type RawSaved = {
+  id: string;
+  merchant: string;
+  amount_cents: number | string;
+  category_id: string;
+  category_name: string;
+};
+
+type RawSub = Omit<QuickAddTileData, "amount_cents"> & {
   amount_cents: number | string;
 };
 
 export default async function QuickAddPage() {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("list_quick_add_options", {
-    p_limit: 12,
-  });
 
-  const options: QuickAddTileData[] = error
+  const [savedRes, subsRes] = await Promise.all([
+    supabase.rpc("list_saved_expenses"),
+    supabase.rpc("list_quick_add_options", { p_limit: 12 }),
+  ]);
+
+  const saved: SavedTileData[] = savedRes.error
     ? []
-    : (data ?? []).map((r: RawOption) => ({
-        ...r,
+    : ((savedRes.data ?? []) as RawSaved[]).map((r) => ({
+        id: r.id,
+        merchant: r.merchant,
+        category_id: r.category_id,
+        category_name: r.category_name,
         amount_cents: BigInt(
           typeof r.amount_cents === "string"
             ? r.amount_cents
@@ -32,8 +46,18 @@ export default async function QuickAddPage() {
         ),
       }));
 
-  const recent = options.filter((o) => o.source === "recent");
-  const subscriptions = options.filter((o) => o.source === "subscription");
+  const subscriptions: QuickAddTileData[] = subsRes.error
+    ? []
+    : ((subsRes.data ?? []) as RawSub[])
+        .filter((r) => r.source === "subscription")
+        .map((r) => ({
+          ...r,
+          amount_cents: BigInt(
+            typeof r.amount_cents === "string"
+              ? r.amount_cents
+              : Math.trunc(r.amount_cents),
+          ),
+        }));
 
   return (
     <div className="pt-3 pb-16">
@@ -45,8 +69,8 @@ export default async function QuickAddPage() {
           </Link>
         }
       />
-      <PageTitle title="Quick Add" subtitle="One tap to re-log" />
-      <QuickAddTabs recent={recent} subscriptions={subscriptions} />
+      <PageTitle title="Quick Add" subtitle="Tap a saved expense to log" />
+      <QuickAddTabs saved={saved} subscriptions={subscriptions} />
     </div>
   );
 }
