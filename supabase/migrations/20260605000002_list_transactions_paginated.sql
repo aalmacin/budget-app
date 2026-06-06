@@ -6,8 +6,13 @@
 -- is: TABLE now includes total_count BIGINT; p_filters now accepts `offset`.
 -- Default page size stays 100 — clients should always pass an explicit limit
 -- so payloads are predictable.
+--
+-- DROP first because CREATE OR REPLACE refuses to change the OUT-parameter
+-- row type (42P13). The whole migration runs in a transaction, so a partial
+-- failure leaves the original function intact.
+DROP FUNCTION IF EXISTS public.list_transactions(JSONB);
 
-CREATE OR REPLACE FUNCTION public.list_transactions(p_filters JSONB)
+CREATE FUNCTION public.list_transactions(p_filters JSONB)
 RETURNS TABLE (
   id                      UUID,
   type                    TEXT,
