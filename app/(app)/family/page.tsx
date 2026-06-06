@@ -60,7 +60,7 @@ export default async function FamilyPage() {
       display_name: k.display_name,
       age_years: k.age_years,
       month_spent_cents: stats
-        ? BigInt(typeof stats.spent_cents === "string" ? stats.spent_cents : stats.spent_cents)
+        ? BigInt(stats.spent_cents)
         : 0n,
       last_activity_day: stats?.last_activity_day ?? null,
     };

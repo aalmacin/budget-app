@@ -38,7 +38,7 @@ export function MemberCard({ member, onSaveDisplayName, onRemove }: Props) {
   };
 
   return (
-    <div className="rounded-2xl bg-surface p-3 shadow-sm flex items-center gap-3">
+    <div className="relative rounded-2xl bg-surface p-3 shadow-sm flex items-center gap-3">
       <FamilyAvatar
         initial={member.display_name.charAt(0).toUpperCase()}
         tone={member.role === "adult" ? "sage" : "sand"}
@@ -78,7 +78,7 @@ export function MemberCard({ member, onSaveDisplayName, onRemove }: Props) {
             <Button size="sm" onClick={save} disabled={pending}>
               Save
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+            <Button size="sm" variant="ghost" onClick={() => { setName(member.display_name); setEditing(false); }}>
               Cancel
             </Button>
           </div>
