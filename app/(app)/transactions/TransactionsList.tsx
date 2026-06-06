@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAppSelector } from "@/store";
 import { TxnRow } from "@/components/transactions/TxnRow";
 import { EditTxnSheet, type EditableTxn } from "@/components/transactions/EditTxnSheet";
 import type { ActivityRowData } from "@/components/transactions/ActivityRow";
+import { Button } from "@/components/ui/Button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type RawTxn = {
@@ -17,12 +18,15 @@ type RawTxn = {
   occurred_on: string;
   essential_pct: number;
   paid_by_display_name: string | null;
+  total_count: number | string;
 };
 
 type RowWithPaid = ActivityRowData & {
   essential_pct: number;
   paid_by_display_name: string | null;
 };
+
+const PAGE_SIZE = 50;
 
 function toRows(data: RawTxn[]): RowWithPaid[] {
   return data.map((r) => ({
@@ -38,39 +42,61 @@ function toRows(data: RawTxn[]): RowWithPaid[] {
   }));
 }
 
+function totalFrom(data: RawTxn[]): number {
+  const v = data[0]?.total_count;
+  if (v === undefined) return 0;
+  return typeof v === "string" ? Number(v) : v;
+}
+
 export function TransactionsList({ initial }: { initial: RawTxn[] }) {
   const [rows, setRows] = useState<RowWithPaid[]>(toRows(initial));
+  const [total, setTotal] = useState<number>(totalFrom(initial));
+  const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<EditableTxn | null>(null);
+  const [loading, setLoading] = useState(false);
   const filters = useAppSelector((s) => s.filters);
 
-  // Re-fetch via RPC whenever the filters change.
-  useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    void supabase
-      .rpc("list_transactions", {
+  // Always fetch from the DB. No client cache, no optimistic local mutations.
+  const fetchPage = useCallback(
+    async (pageIndex: number) => {
+      setLoading(true);
+      const supabase = getSupabaseBrowserClient();
+      const { data } = await supabase.rpc("list_transactions", {
         p_filters: {
           search: filters.search || undefined,
-          essential: filters.essential,
+          // The RPC only understands "essential" / "treats" / NULL — "all" is
+          // a client-side label that must be stripped, otherwise the SQL
+          // filter evaluates to FALSE and every row disappears.
+          essential: filters.essential === "all" ? undefined : filters.essential,
           for_member_id: filters.forMember ?? undefined,
           from: filters.fromDate ?? undefined,
           to: filters.toDate ?? undefined,
+          limit: PAGE_SIZE,
+          offset: pageIndex * PAGE_SIZE,
         },
-      })
-      .then((res: { data: unknown }) => {
-        if (res.data) setRows(toRows(res.data as RawTxn[]));
       });
-  }, [filters.search, filters.essential, filters.forMember, filters.fromDate, filters.toDate]);
+      const raw = (data ?? []) as RawTxn[];
+      setRows(toRows(raw));
+      setTotal(totalFrom(raw));
+      setLoading(false);
+    },
+    [filters.search, filters.essential, filters.forMember, filters.fromDate, filters.toDate],
+  );
 
-  // Group by day for the list rendering.
-  const groups = new Map<string, RowWithPaid[]>();
-  for (const r of rows) {
-    const day = r.occurred_on;
-    const arr = groups.get(day) ?? [];
-    arr.push(r);
-    groups.set(day, arr);
-  }
+  // Reset to page 0 whenever filters change, then refetch. The setPage call
+  // is the intent (filter change should rewind the offset) — the lint rule
+  // is conservative about setState-in-effect but doesn't apply cleanly here
+  // because there is no shared state to derive from.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(0);
+    void fetchPage(0);
+  }, [fetchPage]);
 
-  const handleSave = async (id: string, patch: { amount_cents: bigint; notes: string; essential_pct: number; occurred_on: string }) => {
+  const handleSave = async (
+    id: string,
+    patch: { amount_cents: bigint; notes: string; essential_pct: number; occurred_on: string },
+  ) => {
     const supabase = getSupabaseBrowserClient();
     await supabase.rpc("update_transaction", {
       p_id: id,
@@ -81,21 +107,37 @@ export function TransactionsList({ initial }: { initial: RawTxn[] }) {
         occurred_on: patch.occurred_on,
       },
     });
-    // Refresh.
-    const { data } = await supabase.rpc("list_transactions", { p_filters: {} });
-    if (data) setRows(toRows(data as RawTxn[]));
+    await fetchPage(page);
   };
 
   const handleDelete = async (id: string) => {
     const supabase = getSupabaseBrowserClient();
     await supabase.rpc("delete_transaction", { p_id: id });
-    setRows((rs) => rs.filter((r) => r.id !== id));
+    // If we just deleted the last row on the current page, step back one.
+    const remainingOnPage = rows.length - 1;
+    const nextPage = remainingOnPage === 0 && page > 0 ? page - 1 : page;
+    setPage(nextPage);
+    await fetchPage(nextPage);
   };
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const firstIndex = total === 0 ? 0 : page * PAGE_SIZE + 1;
+  const lastIndex = Math.min(total, (page + 1) * PAGE_SIZE);
+
+  const groups = new Map<string, RowWithPaid[]>();
+  for (const r of rows) {
+    const day = r.occurred_on;
+    const arr = groups.get(day) ?? [];
+    arr.push(r);
+    groups.set(day, arr);
+  }
 
   return (
     <>
       {rows.length === 0 ? (
-        <p className="text-sm text-muted text-center py-12">No matching transactions.</p>
+        <p className="text-sm text-muted text-center py-12">
+          {loading ? "Loading…" : "No matching transactions."}
+        </p>
       ) : (
         [...groups.entries()].map(([day, list]) => (
           <section key={day} className="mb-4">
@@ -110,6 +152,7 @@ export function TransactionsList({ initial }: { initial: RawTxn[] }) {
                   onClick={() =>
                     setEditing({
                       id: r.id,
+                      type: r.type,
                       amount_cents: r.amount_cents,
                       notes: r.notes,
                       essential_pct: r.essential_pct,
@@ -122,6 +165,46 @@ export function TransactionsList({ initial }: { initial: RawTxn[] }) {
           </section>
         ))
       )}
+
+      {total > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 mt-2">
+          <div className="text-xs font-mono text-muted">
+            {firstIndex}–{lastIndex} of {total}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const p = Math.max(0, page - 1);
+                setPage(p);
+                void fetchPage(p);
+              }}
+              disabled={page === 0 || loading}
+            >
+              Prev
+            </Button>
+            <span className="text-xs font-mono text-muted tabular-nums">
+              {page + 1}/{totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const p = Math.min(totalPages - 1, page + 1);
+                setPage(p);
+                void fetchPage(p);
+              }}
+              disabled={page >= totalPages - 1 || loading}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+
       <EditTxnSheet
         txn={editing}
         onClose={() => setEditing(null)}
