@@ -7,6 +7,7 @@ import { SplitBar } from "@/components/ui/SplitBar";
 import { formatCAD } from "@/lib/money";
 import { ActivityRow, type ActivityRowData } from "@/components/transactions/ActivityRow";
 import { RealtimeRefresher } from "./RealtimeRefresher";
+import { DueSubscriptionsCard, type DueRow } from "./DueSubscriptionsCard";
 
 type DashboardSummary = {
   balance_cents: number | string;
@@ -43,9 +44,14 @@ export default async function DashboardPage() {
   const month = now.getMonth() + 1;
 
   // Principle III: clients call RPCs, never `.from()` against household tables.
-  const [{ data: summaryData }, { data: householdIdRaw }] = await Promise.all([
+  const [
+    { data: summaryData },
+    { data: householdIdRaw },
+    { data: dueSubsData },
+  ] = await Promise.all([
     supabase.rpc("get_dashboard_summary", { p_year: year, p_month: month }),
     supabase.rpc("get_current_household"),
+    supabase.rpc("list_due_subscriptions"),
   ]);
 
   const summary = (summaryData ?? {}) as Partial<DashboardSummary>;
@@ -75,6 +81,23 @@ export default async function DashboardPage() {
     occurred_on: r.occurred_on,
   }));
 
+  type RawDueRow = {
+    id: string;
+    merchant: string;
+    amount_cents: number | string;
+    category_name: string;
+    cadence: string;
+    next_renewal_at: string;
+  };
+  const dueRows: DueRow[] = ((dueSubsData ?? []) as RawDueRow[]).map((r) => ({
+    id: r.id,
+    merchant: r.merchant,
+    amount_cents: toBig(r.amount_cents),
+    cadence: r.cadence,
+    next_renewal_at: r.next_renewal_at,
+    category_name: r.category_name,
+  }));
+
   return (
     <div className="pt-3 pb-32 relative">
       {householdId && <RealtimeRefresher householdId={householdId} />}
@@ -90,6 +113,8 @@ export default async function DashboardPage() {
           </Link>
         }
       />
+
+      {dueRows.length > 0 && <DueSubscriptionsCard rows={dueRows} />}
 
       {/* Sage hero — Left to spend */}
       <div className="mx-4 mb-3 rounded-3xl bg-sage text-white p-5 shadow-sm">
