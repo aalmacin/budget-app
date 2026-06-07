@@ -49,7 +49,7 @@ export default async function TransactionsPage() {
     <div className="pt-3 pb-32 relative">
       <AppBar left={<MenuButton />} />
       <PageTitle title="Transactions" />
-      <FilterChips members={filterMembers} />
+      <FilterChips members={filterMembers} categories={expenseCategories} />
       <div className="mt-3">
         <TransactionsList
           initial={initial ?? []}

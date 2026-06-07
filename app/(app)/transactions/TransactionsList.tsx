@@ -99,6 +99,7 @@ export function TransactionsList({
           // filter evaluates to FALSE and every row disappears.
           essential: filters.essential === "all" ? undefined : filters.essential,
           for_member_id: filters.forMember ?? undefined,
+          category_id: filters.categoryId ?? undefined,
           from: filters.fromDate ?? undefined,
           to: filters.toDate ?? undefined,
           limit: PAGE_SIZE,
@@ -110,7 +111,7 @@ export function TransactionsList({
       setTotal(totalFrom(raw));
       setLoading(false);
     },
-    [filters.search, filters.essential, filters.forMember, filters.fromDate, filters.toDate],
+    [filters.search, filters.essential, filters.forMember, filters.categoryId, filters.fromDate, filters.toDate],
   );
 
   // Reset to page 0 whenever filters change, then refetch. The setPage call
