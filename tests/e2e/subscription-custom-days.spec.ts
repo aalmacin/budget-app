@@ -1,7 +1,7 @@
-// 2026-06-06: subscription create flow with cadence=custom_days.
-// Verifies the interval-days input only appears when "custom (days)" is
-// selected, and that a sub with cadence=custom_days, interval_days=14 saves
-// successfully.
+// 2026-06-06: subscription create flow with cadence=custom_days via /add.
+// Verifies that creating a recurring expense with custom_days/14 surfaces
+// the sub on /subscriptions, and that the legacy "Add subscription" button
+// no longer exists on /subscriptions.
 
 import { test, expect, type Page } from "@playwright/test";
 
@@ -16,34 +16,63 @@ async function signIn(page: Page) {
   await page.waitForURL(/\/(dashboard|onboarding\/create-household)/);
 }
 
+function isoDaysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+async function createRecurringExpense(
+  page: Page,
+  opts: { merchant: string; amount: string; cadence?: string; startDateIso?: string; intervalDays?: string },
+) {
+  await page.goto("/add");
+  await page.locator('input[name="amount_cents_dollars"]').fill(opts.amount);
+  // Pick the first existing category from the combobox.
+  const catInput = page.locator('input[placeholder*="category"]').or(
+    page.getByRole("combobox").first(),
+  );
+  await catInput.click();
+  const firstCategory = page.getByRole("option").first();
+  await firstCategory.click();
+  // Merchant (notes).
+  await page.locator('input[name="notes"]').fill(opts.merchant);
+
+  // Toggle Recurring.
+  await page.getByLabel("Recurring").check();
+  if (opts.cadence) {
+    await page.locator('select[name="cadence"]').selectOption(opts.cadence);
+  }
+  if (opts.cadence === "custom_days" && opts.intervalDays) {
+    await page.locator('input[name="interval_days"]').fill(opts.intervalDays);
+  }
+  if (opts.startDateIso) {
+    await page.locator('input[name="start_date"]').fill(opts.startDateIso);
+  }
+
+  await page.getByRole("button", { name: /save expense/i }).click();
+  await page.waitForURL(/\/dashboard/);
+}
+
 test("Create subscription with custom_days cadence", async ({ page }) => {
   await signIn(page);
-  await page.goto("/subscriptions");
-
-  await page.getByRole("button", { name: /add subscription/i }).click();
-
-  // Interval-days input should not be visible yet.
-  await expect(page.getByPlaceholder("Interval days")).toHaveCount(0);
-
-  // Pick custom (days).
-  const cadenceSelect = page.locator("select").nth(1);
-  await cadenceSelect.selectOption("custom_days");
-
-  // Interval-days input now visible, default 30.
-  await expect(page.getByPlaceholder("Interval days")).toBeVisible();
-  await page.getByPlaceholder("Interval days").fill("14");
 
   const merchant = `Custom-${Date.now()}`;
-  await page.locator('input[name="merchant"]').fill(merchant);
-  await page.locator('input[type="number"]').first().fill("5.00");
+  await createRecurringExpense(page, {
+    merchant,
+    amount: "5.00",
+    cadence: "custom_days",
+    intervalDays: "14",
+  });
 
-  await page.getByRole("button", { name: /^add subscription$/i }).click();
-
-  // The new subscription appears in the list.
+  // The new subscription appears on /subscriptions (under All others —
+  // next_renewal_at is today + 14 days).
+  await page.goto("/subscriptions");
   await expect(page.getByText(merchant).first()).toBeVisible({ timeout: 5_000 });
+});
 
-  // Switch back to monthly — interval-days input should disappear again.
-  await page.getByRole("button", { name: /add subscription/i }).click();
-  // (The form is reset on close+reopen.)
-  await expect(page.getByPlaceholder("Interval days")).toHaveCount(0);
+test("No \"Add subscription\" button on /subscriptions", async ({ page }) => {
+  await signIn(page);
+  await page.goto("/subscriptions");
+  await expect(page.getByRole("button", { name: /add subscription/i })).toHaveCount(0);
 });

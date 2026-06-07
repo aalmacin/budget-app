@@ -83,19 +83,23 @@ export default async function DashboardPage() {
 
   type RawDueRow = {
     id: string;
+    type: "expense" | "income";
     merchant: string;
     amount_cents: number | string;
     category_name: string;
     cadence: string;
     next_renewal_at: string;
+    income_source: string | null;
   };
   const dueRows: DueRow[] = ((dueSubsData ?? []) as RawDueRow[]).map((r) => ({
     id: r.id,
+    type: r.type,
     merchant: r.merchant,
     amount_cents: toBig(r.amount_cents),
     cadence: r.cadence,
     next_renewal_at: r.next_renewal_at,
     category_name: r.category_name,
+    income_source: r.income_source,
   }));
 
   return (

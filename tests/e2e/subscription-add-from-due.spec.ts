@@ -1,7 +1,8 @@
 // 2026-06-06: subscription "Add" flow from the home page due card.
-// Creates a subscription whose next_renewal_at is today so it shows up in
-// the Due card. Verifies prefill, save, redirect, and that the row is gone
-// from the due card afterwards.
+// Creates a recurring expense via /add (Recurring checkbox) with a start
+// date 31 days ago so next_renewal_at falls on or before today and the sub
+// shows up in the Due card. Verifies prefill, save, redirect, and that the
+// row is gone from the due card afterwards.
 
 import { test, expect, type Page } from "@playwright/test";
 
@@ -16,19 +17,55 @@ async function signIn(page: Page) {
   await page.waitForURL(/\/(dashboard|onboarding\/create-household)/);
 }
 
+function isoDaysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+async function createRecurringExpense(
+  page: Page,
+  opts: { merchant: string; amount: string; cadence?: string; startDateIso?: string; intervalDays?: string },
+) {
+  await page.goto("/add");
+  await page.locator('input[name="amount_cents_dollars"]').fill(opts.amount);
+  // Pick the first existing category from the combobox.
+  const catInput = page.locator('input[placeholder*="category"]').or(
+    page.getByRole("combobox").first(),
+  );
+  await catInput.click();
+  const firstCategory = page.getByRole("option").first();
+  await firstCategory.click();
+  // Merchant (notes).
+  await page.locator('input[name="notes"]').fill(opts.merchant);
+
+  // Toggle Recurring.
+  await page.getByLabel("Recurring").check();
+  if (opts.cadence) {
+    await page.locator('select[name="cadence"]').selectOption(opts.cadence);
+  }
+  if (opts.cadence === "custom_days" && opts.intervalDays) {
+    await page.locator('input[name="interval_days"]').fill(opts.intervalDays);
+  }
+  if (opts.startDateIso) {
+    await page.locator('input[name="start_date"]').fill(opts.startDateIso);
+  }
+
+  await page.getByRole("button", { name: /save expense/i }).click();
+  await page.waitForURL(/\/dashboard/);
+}
+
 test("Add from due subscription prefills, saves, and clears the due card", async ({ page }) => {
   await signIn(page);
-  await page.goto("/subscriptions");
 
-  // Create a subscription due today.
   const merchant = `DueSub-${Date.now()}`;
-  await page.getByRole("button", { name: /add subscription/i }).click();
-  await page.locator('input[name="merchant"]').fill(merchant);
-  await page.locator('input[type="number"]').first().fill("12.34");
-  // Cadence stays monthly (default). Next renewal stays today (default).
-  await page.getByRole("button", { name: /^add subscription$/i }).click();
+  await createRecurringExpense(page, {
+    merchant,
+    amount: "12.34",
+    cadence: "monthly",
+    startDateIso: isoDaysAgo(31),
+  });
 
-  // Go to dashboard; the Due card should appear with our row.
   await page.goto("/dashboard");
   const dueRow = page.locator("text=Due subscriptions").locator("..");
   await expect(dueRow.getByText(merchant)).toBeVisible({ timeout: 5_000 });

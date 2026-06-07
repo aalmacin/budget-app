@@ -10,6 +10,7 @@ import { MerchantCombobox } from "@/components/transactions/MerchantCombobox";
 import { ForWhomChips } from "@/components/transactions/ForWhomChips";
 import { SplitSlider } from "@/components/transactions/SplitSlider";
 import { SplitRuleChips, type SplitRule } from "@/components/transactions/SplitRuleChips";
+import { RecurringFields } from "@/components/transactions/RecurringFields";
 import { logExpenseAction, createExpenseCategoryAction, type LogExpenseState } from "./actions";
 
 const INITIAL: LogExpenseState = { error: null };
@@ -189,6 +190,10 @@ export function AddExpenseForm({
           }
         />
       </div>
+
+      {submitAction === undefined && (
+        <RecurringFields todayIso={todayIso} />
+      )}
 
       {showTemplateUI && template ? (
         <>
