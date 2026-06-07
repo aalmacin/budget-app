@@ -2,8 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
-import { FAB } from "@/components/ui/FAB";
-import { Icon } from "@/components/ui/icons";
+import { AddFAB } from "@/components/ui/AddFAB";
 import { FilterChips } from "@/components/transactions/FilterChips";
 import { TransactionsList } from "./TransactionsList";
 
@@ -58,7 +57,7 @@ export default async function TransactionsPage() {
           merchants={merchants}
         />
       </div>
-      <FAB href="/quick-add" icon={Icon.plus(20)} />
+      <AddFAB />
     </div>
   );
 }

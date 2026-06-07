@@ -2,8 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { MenuButton } from "@/components/layout/AppDrawer";
-import { FAB } from "@/components/ui/FAB";
-import { Icon } from "@/components/ui/icons";
+import { AddFAB } from "@/components/ui/AddFAB";
 import { SplitBar } from "@/components/ui/SplitBar";
 import { formatCAD } from "@/lib/money";
 import { ActivityRow, type ActivityRowData } from "@/components/transactions/ActivityRow";
@@ -168,7 +167,7 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <FAB href="/quick-add" icon={Icon.plus(20)} />
+      <AddFAB />
     </div>
   );
 }
