@@ -19,9 +19,6 @@ type DrawerLink = {
 // NOTE: Taxes is intentionally absent per spec clarification §6 (US8 removed in v1).
 const LINKS: DrawerLink[] = [
   { href: "/dashboard", label: "Dashboard", section: "main" },
-  { href: "/quick-add", label: "Quick Add", section: "money" },
-  { href: "/add", label: "Add Expense", section: "money" },
-  { href: "/add-income", label: "Add Income", section: "money" },
   { href: "/transactions", label: "Transactions", section: "money" },
   { href: "/budget", label: "Budget", section: "money" },
   { href: "/reports/spend-over-time", label: "Reports", section: "money" },
