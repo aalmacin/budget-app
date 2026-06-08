@@ -12,19 +12,19 @@ import type { QuickAddTileData } from "./QuickAddTile";
 type Props = { tiles: QuickAddTileData[] };
 
 /**
- * Subscription rows have two affordances per spec clarification §9:
+ * Recurring transaction rows have two affordances per spec clarification §9:
  *  - primary row tap → re-log an immediate transaction (occurrence_date stays
  *    null so the cron auto-log isn't blocked)
- *  - pencil-icon secondary tap → navigate to the subscription edit sheet
+ *  - pencil-icon secondary tap → navigate to the recurring transaction edit sheet
  */
-export function SubscriptionTilesList({ tiles }: Props) {
+export function RecurringTransactionsTilesList({ tiles }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
   if (tiles.length === 0) {
     return (
       <p className="px-4 py-8 text-center text-sm text-muted">
-        No subscriptions due in the next 30 days.
+        No recurring transactions due in the next 30 days.
       </p>
     );
   }
@@ -72,7 +72,7 @@ export function SubscriptionTilesList({ tiles }: Props) {
             </div>
           </button>
           <Link
-            href={`/subscriptions/${t.source_id}/edit`}
+            href={`/recurring-transactions/${t.source_id}/edit`}
             aria-label={`Edit ${t.merchant}`}
             className="p-2 text-muted hover:text-ink"
           >

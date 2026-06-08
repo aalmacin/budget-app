@@ -7,6 +7,7 @@ import { SplitBar } from "@/components/ui/SplitBar";
 import { formatCAD } from "@/lib/money";
 import { ActivityRow, type ActivityRowData } from "@/components/transactions/ActivityRow";
 import { RealtimeRefresher } from "./RealtimeRefresher";
+import { DueRecurringTransactionsCard, type DueRow } from "./DueRecurringTransactionsCard";
 
 type DashboardSummary = {
   balance_cents: number | string;
@@ -43,9 +44,14 @@ export default async function DashboardPage() {
   const month = now.getMonth() + 1;
 
   // Principle III: clients call RPCs, never `.from()` against household tables.
-  const [{ data: summaryData }, { data: householdIdRaw }] = await Promise.all([
+  const [
+    { data: summaryData },
+    { data: householdIdRaw },
+    { data: dueSubsData },
+  ] = await Promise.all([
     supabase.rpc("get_dashboard_summary", { p_year: year, p_month: month }),
     supabase.rpc("get_current_household"),
+    supabase.rpc("list_due_subscriptions"),
   ]);
 
   const summary = (summaryData ?? {}) as Partial<DashboardSummary>;
@@ -75,6 +81,27 @@ export default async function DashboardPage() {
     occurred_on: r.occurred_on,
   }));
 
+  type RawDueRow = {
+    id: string;
+    type: "expense" | "income";
+    merchant: string;
+    amount_cents: number | string;
+    category_name: string;
+    cadence: string;
+    next_renewal_at: string;
+    income_source: string | null;
+  };
+  const dueRows: DueRow[] = ((dueSubsData ?? []) as RawDueRow[]).map((r) => ({
+    id: r.id,
+    type: r.type,
+    merchant: r.merchant,
+    amount_cents: toBig(r.amount_cents),
+    cadence: r.cadence,
+    next_renewal_at: r.next_renewal_at,
+    category_name: r.category_name,
+    income_source: r.income_source,
+  }));
+
   return (
     <div className="pt-3 pb-32 relative">
       {householdId && <RealtimeRefresher householdId={householdId} />}
@@ -90,6 +117,8 @@ export default async function DashboardPage() {
           </Link>
         }
       />
+
+      {dueRows.length > 0 && <DueRecurringTransactionsCard rows={dueRows} />}
 
       {/* Sage hero — Left to spend */}
       <div className="mx-4 mb-3 rounded-3xl bg-sage text-white p-5 shadow-sm">

@@ -6,8 +6,14 @@ import {
   AddExpenseForm,
   type CategoryOption,
   type MemberOption,
-  type ExpenseTemplate,
+  type ExpensePrefill,
+  type ExpenseTemplateRef,
 } from "./AddExpenseForm";
+import type {
+  CategoryRow,
+  MemberRow,
+  MerchantRow,
+} from "@/lib/supabase/rpc-rows";
 
 export const metadata = { title: "Add expense · Budget" };
 
@@ -39,10 +45,6 @@ export default async function AddExpensePage({
       supabase.rpc("list_merchants"),
     ]);
 
-  type CategoryRow = { id: string; name: string };
-  type MemberRow = { id: string; display_name: string; role: "adult" | "kid" };
-  type MerchantRow = { name: string };
-
   const categories: CategoryOption[] = ((categoriesData ?? []) as CategoryRow[])
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((c) => ({ id: c.id, name: c.name }));
@@ -55,7 +57,8 @@ export default async function AddExpensePage({
     .map((m) => m.name)
     .filter(Boolean);
 
-  let template: ExpenseTemplate | null = null;
+  let prefill: ExpensePrefill | null = null;
+  let template: ExpenseTemplateRef | null = null;
   if (templateId) {
     const { data: tplRows } = await supabase.rpc("get_saved_expense", {
       p_id: templateId,
@@ -66,8 +69,7 @@ export default async function AddExpensePage({
       await supabase.rpc("touch_saved_expense", { p_id: templateId });
       const categoryName =
         categories.find((c) => c.id === tplData.category_id)?.name ?? "";
-      template = {
-        id: tplData.id,
+      prefill = {
         merchant: tplData.merchant,
         amount_cents: BigInt(
           typeof tplData.amount_cents === "string"
@@ -81,6 +83,7 @@ export default async function AddExpensePage({
         essential_pct: tplData.essential_pct,
         split_rule: tplData.split_rule,
       };
+      template = { id: tplData.id, merchant: tplData.merchant };
     }
   }
 
@@ -98,6 +101,7 @@ export default async function AddExpensePage({
         members={members}
         merchants={merchants}
         todayIso={today}
+        prefill={prefill}
         template={template}
       />
     </div>

@@ -37,6 +37,7 @@ export default async function AddIncomePage() {
         incomeCategoryId={incomeCategoryId}
         adults={adults}
         todayIso={today}
+        prefill={null}
       />
     </div>
   );

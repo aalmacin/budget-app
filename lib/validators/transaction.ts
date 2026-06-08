@@ -55,3 +55,17 @@ export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export const deleteTransactionSchema = z.object({
   id: uuidSchema,
 });
+
+export const recurringSchema = z.object({
+  cadence: z.enum([
+    "weekly",
+    "biweekly",
+    "monthly",
+    "quarterly",
+    "yearly",
+    "custom_days",
+  ]),
+  interval_days: z.coerce.number().int().positive().nullable().optional(),
+  start_date: isoDate,
+});
+export type RecurringInput = z.infer<typeof recurringSchema>;

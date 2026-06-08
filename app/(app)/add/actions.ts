@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { logExpenseSchema } from "@/lib/validators/transaction";
+import { logExpenseSchema, recurringSchema } from "@/lib/validators/transaction";
 
 export type LogExpenseState = { error: string | null };
 export type CreateCategoryResult =
@@ -52,8 +52,6 @@ export async function logExpenseAction(
     if (categoryName.length > CATEGORY_NAME_MAX) {
       return { error: `Category name must be ${CATEGORY_NAME_MAX} characters or fewer` };
     }
-    // `public.category` has no DML grant for authenticated; the RPC is the
-    // only way for clients to create a category.
     const { data: ensuredId, error: ensureErr } = await supabase.rpc("ensure_category", {
       p_name: categoryName,
       p_kind: "expense",
@@ -75,52 +73,48 @@ export async function logExpenseAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const { error } = await supabase.rpc("log_expense", {
-    p: {
-      ...parsed.data,
-      amount_cents: parsed.data.amount_cents.toString(),
-    },
-  });
-  if (error) return { error: error.message };
+  const isRecurring = raw.recurring === "on";
 
-  // Template side-effects. These are best-effort: the expense is already
-  // logged, so a failure here surfaces an inline error but does not roll back.
-  const templateId = ((raw.template_id as string | undefined) ?? "").trim();
-  const overrideTemplate = raw.override_template === "on";
-  const saveAsTemplate = raw.save_as_template === "on";
-  const merchant = (parsed.data.notes ?? "").trim();
+  if (isRecurring) {
+    const recurringParsed = recurringSchema.safeParse({
+      cadence: raw.cadence,
+      interval_days: raw.interval_days || undefined,
+      start_date: raw.start_date,
+    });
+    if (!recurringParsed.success) {
+      return { error: recurringParsed.error.issues[0]?.message ?? "Invalid recurring fields" };
+    }
+    const r = recurringParsed.data;
+    if (r.cadence === "custom_days") {
+      if (!r.interval_days || r.interval_days < 1) {
+        return { error: "interval_days is required for custom cadence" };
+      }
+    } else if (r.interval_days != null) {
+      return { error: "interval_days only allowed when cadence=custom_days" };
+    }
 
-  if (templateId && overrideTemplate) {
-    const { error: updErr } = await supabase.rpc("update_saved_expense", {
-      p_id: templateId,
+    const { error } = await supabase.rpc("log_expense_with_subscription", {
       p: {
-        merchant: merchant || "Saved expense",
+        ...parsed.data,
         amount_cents: parsed.data.amount_cents.toString(),
-        category_id: parsed.data.category_id,
-        paid_by_member_id: parsed.data.paid_by_member_id ?? null,
-        for_member_id: parsed.data.for_member_id ?? null,
-        essential_pct: parsed.data.essential_pct ?? 100,
-        split_rule: parsed.data.split_rule ?? null,
+        cadence: r.cadence,
+        interval_days: r.cadence === "custom_days" ? r.interval_days : null,
+        start_date: r.start_date,
       },
     });
-    if (updErr) return { error: updErr.message };
-  } else if (!templateId && saveAsTemplate) {
-    const { error: createErr } = await supabase.rpc("create_saved_expense", {
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase.rpc("log_expense", {
       p: {
-        merchant: merchant || "Saved expense",
+        ...parsed.data,
         amount_cents: parsed.data.amount_cents.toString(),
-        category_id: parsed.data.category_id,
-        paid_by_member_id: parsed.data.paid_by_member_id ?? null,
-        for_member_id: parsed.data.for_member_id ?? null,
-        essential_pct: parsed.data.essential_pct ?? 100,
-        split_rule: parsed.data.split_rule ?? null,
       },
     });
-    if (createErr) return { error: createErr.message };
+    if (error) return { error: error.message };
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
-  revalidatePath("/quick-add");
+  revalidatePath("/recurring-transactions");
   redirect("/dashboard");
 }

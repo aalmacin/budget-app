@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SavedTilesGrid, type SavedTileData } from "@/components/quick-add/SavedTilesGrid";
-import { SubscriptionTilesList } from "@/components/quick-add/SubscriptionTilesList";
+import { RecurringTransactionsTilesList } from "@/components/quick-add/RecurringTransactionsTilesList";
 import type { QuickAddTileData } from "@/components/quick-add/QuickAddTile";
 import { Chip } from "@/components/ui/Chip";
 
@@ -28,7 +28,7 @@ export function QuickAddTabs({ saved, subscriptions }: Props) {
             Saved
           </Chip>
           <Chip selected={tab === "subs"} onClick={() => onTabClick("subs")}>
-            Subs
+            Recurring
           </Chip>
         </div>
         {tab === "saved" && saved.length > 0 ? (
@@ -44,7 +44,7 @@ export function QuickAddTabs({ saved, subscriptions }: Props) {
       {tab === "saved" ? (
         <SavedTilesGrid tiles={saved} editMode={editMode} />
       ) : (
-        <SubscriptionTilesList tiles={subscriptions} />
+        <RecurringTransactionsTilesList tiles={subscriptions} />
       )}
     </>
   );

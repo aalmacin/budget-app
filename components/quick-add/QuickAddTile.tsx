@@ -26,7 +26,7 @@ type Props = {
 /**
  * Single Quick Add tile. Primary tap re-logs (handler comes from the parent
  * grid). Subscription tile renders a pencil button as a sibling — handled in
- * SubscriptionTilesList, not here, to keep this component dumb.
+ * RecurringTransactionsTilesList, not here, to keep this component dumb.
  */
 export function QuickAddTile({ tile, onPrimaryTap }: Props) {
   return (

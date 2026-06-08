@@ -32,17 +32,17 @@ test("Quick Add Recent tile re-logs in two taps (≤SC-008)", async ({ page }) =
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 6_000 });
 });
 
-test("Quick Add pencil on a Sub row navigates to edit, does not log", async ({ page }) => {
+test("Quick Add pencil on a Recurring row navigates to edit, does not log", async ({ page }) => {
   await signIn(page);
   await page.goto("/quick-add");
-  await page.getByRole("button", { name: /subs/i }).click();
+  await page.getByRole("button", { name: /recurring/i }).click();
 
   const edit = page.locator('a[aria-label^="Edit "]').first();
   if (!(await edit.isVisible().catch(() => false))) {
-    test.skip(true, "No subscriptions due in next 30 days for this household");
+    test.skip(true, "No recurring transactions due in next 30 days for this household");
   }
   await edit.click();
-  await expect(page).toHaveURL(/\/subscriptions\/[a-f0-9-]+\/edit/);
+  await expect(page).toHaveURL(/\/recurring-transactions\/[a-f0-9-]+\/edit/);
 });
 
 test("Quick Add + opens the full Add Expense form", async ({ page }) => {
