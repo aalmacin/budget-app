@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { TypePill } from "@/components/transactions/TypePill";
 import { formatCAD } from "@/lib/money";
-import { skipSubscriptionOccurrenceAction } from "../subscriptions/actions";
+import { skipRecurringTransactionOccurrenceAction } from "../recurring-transactions/actions";
 
 export type DueRow = {
   id: string;
@@ -18,19 +18,19 @@ export type DueRow = {
   income_source: string | null;
 };
 
-export function DueSubscriptionsCard({ rows }: { rows: DueRow[] }) {
+export function DueRecurringTransactionsCard({ rows }: { rows: DueRow[] }) {
   const [pending, startTransition] = useTransition();
 
   const skip = (id: string) => {
     startTransition(async () => {
-      await skipSubscriptionOccurrenceAction(id);
+      await skipRecurringTransactionOccurrenceAction(id);
     });
   };
 
   return (
     <div className="mx-4 mb-3 rounded-3xl bg-surface p-4 shadow-sm ring-1 ring-brick/20">
       <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-brick mb-2">
-        Due subscriptions · {rows.length}
+        Due recurring · {rows.length}
       </div>
       <ul className="divide-y divide-line/40">
         {rows.map((r) => (
@@ -46,7 +46,7 @@ export function DueSubscriptionsCard({ rows }: { rows: DueRow[] }) {
               {formatCAD(r.amount_cents).replace("CA$", "$")}
             </div>
             <Link
-              href={`/subscriptions/${r.id}/add`}
+              href={`/recurring-transactions/${r.id}/add`}
               className="inline-flex items-center px-3 h-9 rounded-2xl bg-sage text-white text-xs"
             >
               Add

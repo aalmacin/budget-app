@@ -72,7 +72,7 @@ test("Add from due subscription prefills, saves, and clears the due card", async
 
   // Tap Add.
   await dueRow.getByRole("link", { name: /^Add$/ }).first().click();
-  await page.waitForURL(/\/subscriptions\/.+\/add/);
+  await page.waitForURL(/\/recurring-transactions\/.+\/add/);
 
   // Verify prefill: the amount field should show 12.34.
   await expect(page.locator('input[name="amount_cents_dollars"]')).toHaveValue("12.34");

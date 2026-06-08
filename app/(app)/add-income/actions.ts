@@ -63,6 +63,6 @@ export async function logIncomeAction(
 
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
-  revalidatePath("/subscriptions");
+  revalidatePath("/recurring-transactions");
   redirect("/dashboard");
 }

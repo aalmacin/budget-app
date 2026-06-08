@@ -7,7 +7,7 @@ import { SplitBar } from "@/components/ui/SplitBar";
 import { formatCAD } from "@/lib/money";
 import { ActivityRow, type ActivityRowData } from "@/components/transactions/ActivityRow";
 import { RealtimeRefresher } from "./RealtimeRefresher";
-import { DueSubscriptionsCard, type DueRow } from "./DueSubscriptionsCard";
+import { DueRecurringTransactionsCard, type DueRow } from "./DueRecurringTransactionsCard";
 
 type DashboardSummary = {
   balance_cents: number | string;
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
         }
       />
 
-      {dueRows.length > 0 && <DueSubscriptionsCard rows={dueRows} />}
+      {dueRows.length > 0 && <DueRecurringTransactionsCard rows={dueRows} />}
 
       {/* Sage hero — Left to spend */}
       <div className="mx-4 mb-3 rounded-3xl bg-sage text-white p-5 shadow-sm">

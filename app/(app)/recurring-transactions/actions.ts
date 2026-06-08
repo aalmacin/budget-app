@@ -10,33 +10,33 @@ import {
 import type { LogExpenseState } from "../add/actions";
 import type { LogIncomeState } from "../add-income/actions";
 
-export async function pauseSubscriptionAction(id: string) {
+export async function pauseRecurringTransactionAction(id: string) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("pause_subscription", { p_id: id });
   if (error) return { error: error.message };
-  revalidatePath("/subscriptions");
+  revalidatePath("/recurring-transactions");
   return {};
 }
 
-export async function resumeSubscriptionAction(id: string) {
+export async function resumeRecurringTransactionAction(id: string) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("resume_subscription", { p_id: id });
   if (error) return { error: error.message };
-  revalidatePath("/subscriptions");
+  revalidatePath("/recurring-transactions");
   return {};
 }
 
-export async function skipSubscriptionOccurrenceAction(id: string): Promise<{ error?: string }> {
+export async function skipRecurringTransactionOccurrenceAction(id: string): Promise<{ error?: string }> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("skip_subscription_occurrence", { p_id: id });
   if (error) return { error: error.message };
-  revalidatePath("/subscriptions");
+  revalidatePath("/recurring-transactions");
   revalidatePath("/dashboard");
   return {};
 }
 
-export async function logSubscriptionExpenseAction(
-  subscriptionId: string,
+export async function logRecurringTransactionExpenseAction(
+  recurringTransactionId: string,
   _prev: LogExpenseState,
   formData: FormData,
 ): Promise<LogExpenseState> {
@@ -45,7 +45,7 @@ export async function logSubscriptionExpenseAction(
 
   const categoryId = (raw.category_id as string | undefined) ?? "";
   if (!categoryId) {
-    return { error: "Pick an existing category (subscription prefill required)" };
+    return { error: "Pick an existing category (recurring transaction prefill required)" };
   }
 
   const parsed = logExpenseSchema.safeParse({
@@ -61,7 +61,7 @@ export async function logSubscriptionExpenseAction(
 
   const { error } = await supabase.rpc("log_subscription_expense", {
     p: {
-      subscription_id: subscriptionId,
+      subscription_id: recurringTransactionId,
       amount_cents: parsed.data.amount_cents.toString(),
       category_id: parsed.data.category_id,
       occurred_on: parsed.data.occurred_on,
@@ -75,13 +75,13 @@ export async function logSubscriptionExpenseAction(
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard");
-  revalidatePath("/subscriptions");
+  revalidatePath("/recurring-transactions");
   revalidatePath("/transactions");
   redirect("/dashboard");
 }
 
-export async function logSubscriptionIncomeAction(
-  subscriptionId: string,
+export async function logRecurringTransactionIncomeAction(
+  recurringTransactionId: string,
   _prev: LogIncomeState,
   formData: FormData,
 ): Promise<LogIncomeState> {
@@ -94,7 +94,7 @@ export async function logSubscriptionIncomeAction(
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("log_subscription_income", {
     p: {
-      subscription_id: subscriptionId,
+      subscription_id: recurringTransactionId,
       amount_cents: parsed.data.amount_cents.toString(),
       category_id: parsed.data.category_id,
       occurred_on: parsed.data.occurred_on,
@@ -105,7 +105,7 @@ export async function logSubscriptionIncomeAction(
   if (error) return { error: error.message };
 
   revalidatePath("/dashboard");
-  revalidatePath("/subscriptions");
+  revalidatePath("/recurring-transactions");
   revalidatePath("/transactions");
   redirect("/dashboard");
 }

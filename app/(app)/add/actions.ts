@@ -115,6 +115,6 @@ export async function logExpenseAction(
 
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
-  revalidatePath("/subscriptions");
+  revalidatePath("/recurring-transactions");
   redirect("/dashboard");
 }

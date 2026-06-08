@@ -14,11 +14,11 @@ import {
   type AdultOption,
   type IncomePrefill,
 } from "../../../add-income/AddIncomeForm";
-import { logSubscriptionExpenseAction, logSubscriptionIncomeAction } from "../../actions";
+import { logRecurringTransactionExpenseAction, logRecurringTransactionIncomeAction } from "../../actions";
 import type { SplitRule } from "@/components/transactions/SplitRuleChips";
 import type { CategoryRow, MemberRow, MerchantRow } from "@/lib/supabase/rpc-rows";
 
-export const metadata = { title: "Log subscription · Budget" };
+export const metadata = { title: "Log recurring transaction · Budget" };
 export const dynamic = "force-dynamic";
 
 type PrefillRow = {
@@ -40,7 +40,7 @@ type PrefillRow = {
 
 type IncomeCategoryRow = { id: string };
 
-export default async function SubscriptionAddPage({
+export default async function RecurringTransactionAddPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -54,7 +54,7 @@ export default async function SubscriptionAddPage({
   );
   const rows = (prefillRows ?? []) as PrefillRow[];
   if (prefillErr || rows.length === 0) {
-    redirect("/subscriptions");
+    redirect("/recurring-transactions");
   }
   const row = rows[0];
 
@@ -97,7 +97,7 @@ export default async function SubscriptionAddPage({
       income_source: row.income_source ?? "Salary",
     };
 
-    const bound = logSubscriptionIncomeAction.bind(null, id);
+    const bound = logRecurringTransactionIncomeAction.bind(null, id);
 
     return (
       <div className="pt-3">
@@ -113,7 +113,7 @@ export default async function SubscriptionAddPage({
           prefill={prefill}
           submitAction={bound}
           submitLabel="Save & advance"
-          cancelHref="/subscriptions"
+          cancelHref="/recurring-transactions"
         />
       </div>
     );
@@ -146,7 +146,7 @@ export default async function SubscriptionAddPage({
     essential_pct: row.essential_pct,
     split_rule: row.split_rule,
   };
-  const bound = logSubscriptionExpenseAction.bind(null, id);
+  const bound = logRecurringTransactionExpenseAction.bind(null, id);
 
   return (
     <div className="pt-3">
@@ -164,7 +164,7 @@ export default async function SubscriptionAddPage({
         template={null}
         submitAction={bound}
         submitLabel="Save & advance"
-        cancelHref="/subscriptions"
+        cancelHref="/recurring-transactions"
       />
     </div>
   );

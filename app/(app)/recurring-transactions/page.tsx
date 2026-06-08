@@ -3,15 +3,15 @@ import { AppBar } from "@/components/ui/AppBar";
 import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import {
-  SubscriptionsClient,
-  type SubscriptionRow,
+  RecurringTransactionsClient,
+  type RecurringTransactionRow,
   type DueRow,
   type UpcomingRow,
   type Overlap,
-} from "./SubscriptionsClient";
+} from "./RecurringTransactionsClient";
 import type { SplitRule } from "@/components/transactions/SplitRuleChips";
 
-export const metadata = { title: "Subscriptions · Budget" };
+export const metadata = { title: "Recurring Transactions · Budget" };
 export const dynamic = "force-dynamic";
 
 type RawSub = {
@@ -57,7 +57,7 @@ function asType(t: string): "expense" | "income" {
   return t === "income" ? "income" : "expense";
 }
 
-export default async function SubscriptionsPage() {
+export default async function RecurringTransactionsPage() {
   const supabase = await createSupabaseServerClient();
 
   const [
@@ -84,7 +84,7 @@ export default async function SubscriptionsPage() {
   const allRows = ((subsData ?? []) as RawSub[])
     .slice()
     .sort((a, b) => a.next_renewal_at.localeCompare(b.next_renewal_at))
-    .map<SubscriptionRow>((s) => ({
+    .map<RecurringTransactionRow>((s) => ({
       id: s.id,
       type: asType(s.type),
       merchant: s.merchant,
@@ -129,8 +129,8 @@ export default async function SubscriptionsPage() {
   return (
     <div className="pt-3 pb-16">
       <AppBar left={<MenuButton />} />
-      <PageTitle title="Subscriptions" subtitle="Recurring expenses and income" />
-      <SubscriptionsClient
+      <PageTitle title="Recurring Transactions" subtitle="Recurring expenses and income" />
+      <RecurringTransactionsClient
         due={dueRows}
         upcoming={upcomingRows}
         others={others}

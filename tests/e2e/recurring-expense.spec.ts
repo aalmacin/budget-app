@@ -36,8 +36,8 @@ test("Add Expense with Recurring creates a subscription AND the first transactio
   // Expense visible.
   await expect(page.getByText(merchant).first()).toBeVisible({ timeout: 5_000 });
 
-  // Subscription visible on /subscriptions (under All others — next renewal is 1 month out).
-  await page.goto("/subscriptions");
+  // Subscription visible on /recurring-transactions (under All others — next renewal is 1 month out).
+  await page.goto("/recurring-transactions");
   await expect(page.getByText(merchant)).toBeVisible({ timeout: 5_000 });
   await expect(page.getByText("Out").first()).toBeVisible();
 });

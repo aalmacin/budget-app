@@ -31,7 +31,7 @@ test("Add Income with Recurring creates an income subscription", async ({ page }
 
   await expect(page.getByText(note).first()).toBeVisible({ timeout: 5_000 });
 
-  await page.goto("/subscriptions");
+  await page.goto("/recurring-transactions");
   await expect(page.getByText(note)).toBeVisible({ timeout: 5_000 });
   // Income pill present.
   await expect(page.getByText("In").first()).toBeVisible();

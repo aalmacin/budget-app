@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { TypePill } from "@/components/transactions/TypePill";
 import { formatCAD } from "@/lib/money";
 import {
-  pauseSubscriptionAction,
-  resumeSubscriptionAction,
-  skipSubscriptionOccurrenceAction,
+  pauseRecurringTransactionAction,
+  resumeRecurringTransactionAction,
+  skipRecurringTransactionOccurrenceAction,
 } from "./actions";
 
-export type SubscriptionRow = {
+export type RecurringTransactionRow = {
   id: string;
   type: "expense" | "income";
   merchant: string;
@@ -45,7 +45,7 @@ export type Overlap = {
 type Props = {
   due: DueRow[];
   upcoming: UpcomingRow[];
-  others: SubscriptionRow[];
+  others: RecurringTransactionRow[];
   overlaps: Overlap[];
 };
 
@@ -58,19 +58,19 @@ function rowMeta(r: { type: string; category_name: string; income_source: string
   return `${label} · ${cadenceLabel(r.cadence)}`;
 }
 
-export function SubscriptionsClient({ due, upcoming, others, overlaps }: Props) {
+export function RecurringTransactionsClient({ due, upcoming, others, overlaps }: Props) {
   const [pending, startTransition] = useTransition();
 
-  const togglePause = (s: SubscriptionRow) => {
+  const togglePause = (s: RecurringTransactionRow) => {
     startTransition(async () => {
-      if (s.active) await pauseSubscriptionAction(s.id);
-      else await resumeSubscriptionAction(s.id);
+      if (s.active) await pauseRecurringTransactionAction(s.id);
+      else await resumeRecurringTransactionAction(s.id);
     });
   };
 
   const skipDue = (id: string) => {
     startTransition(async () => {
-      await skipSubscriptionOccurrenceAction(id);
+      await skipRecurringTransactionOccurrenceAction(id);
     });
   };
 
@@ -82,7 +82,7 @@ export function SubscriptionsClient({ due, upcoming, others, overlaps }: Props) 
           <ul className="text-xs text-ink-2 space-y-1">
             {overlaps.map((o) => (
               <li key={o.category_name}>
-                {o.count} overlapping {o.category_name} subs · review to save{" "}
+                {o.count} overlapping {o.category_name} recurring · review to save{" "}
                 {formatCAD(o.monthly_total_cents).replace("CA$", "$")}/mo
               </li>
             ))}
@@ -109,7 +109,7 @@ export function SubscriptionsClient({ due, upcoming, others, overlaps }: Props) 
                   {formatCAD(s.amount_cents).replace("CA$", "$")}
                 </div>
                 <Link
-                  href={`/subscriptions/${s.id}/add`}
+                  href={`/recurring-transactions/${s.id}/add`}
                   className="inline-flex items-center px-3 h-9 rounded-2xl bg-sage text-white text-xs"
                 >
                   Add
@@ -162,7 +162,7 @@ export function SubscriptionsClient({ due, upcoming, others, overlaps }: Props) 
           {others.length === 0 ? (
             <p className="p-4 text-sm text-muted text-center">
               {due.length === 0 && upcoming.length === 0
-                ? "No subscriptions yet. Create one from Add Expense or Add Income with the Recurring checkbox."
+                ? "No recurring transactions yet. Create one from Add Expense or Add Income with the Recurring checkbox."
                 : "Nothing else."}
             </p>
           ) : (

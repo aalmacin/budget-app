@@ -38,7 +38,7 @@ test("Add from a due INCOME subscription routes to AddIncomeForm and saves", asy
   await expect(dueCard.getByText(note)).toBeVisible({ timeout: 5_000 });
 
   await dueCard.getByRole("link", { name: /^Add$/ }).first().click();
-  await page.waitForURL(/\/subscriptions\/.+\/add/);
+  await page.waitForURL(/\/recurring-transactions\/.+\/add/);
 
   // The form is the income form: it has the Source select.
   await expect(page.locator('select[name="income_source"]')).toBeVisible();

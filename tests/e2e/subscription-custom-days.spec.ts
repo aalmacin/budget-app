@@ -1,7 +1,7 @@
 // 2026-06-06: subscription create flow with cadence=custom_days via /add.
 // Verifies that creating a recurring expense with custom_days/14 surfaces
-// the sub on /subscriptions, and that the legacy "Add subscription" button
-// no longer exists on /subscriptions.
+// the sub on /recurring-transactions, and that the legacy "Add subscription" button
+// no longer exists on /recurring-transactions.
 
 import { test, expect, type Page } from "@playwright/test";
 
@@ -65,14 +65,14 @@ test("Create subscription with custom_days cadence", async ({ page }) => {
     intervalDays: "14",
   });
 
-  // The new subscription appears on /subscriptions (under All others —
+  // The new subscription appears on /recurring-transactions (under All others —
   // next_renewal_at is today + 14 days).
-  await page.goto("/subscriptions");
+  await page.goto("/recurring-transactions");
   await expect(page.getByText(merchant).first()).toBeVisible({ timeout: 5_000 });
 });
 
-test("No \"Add subscription\" button on /subscriptions", async ({ page }) => {
+test("No \"Add subscription\" button on /recurring-transactions", async ({ page }) => {
   await signIn(page);
-  await page.goto("/subscriptions");
+  await page.goto("/recurring-transactions");
   await expect(page.getByRole("button", { name: /add subscription/i })).toHaveCount(0);
 });

@@ -1,5 +1,5 @@
 // 2026-06-06: Register a recurring expense via /add (Recurring checked),
-// then verify pause/resume on /subscriptions.
+// then verify pause/resume on /recurring-transactions.
 
 import { test, expect, type Page } from "@playwright/test";
 
@@ -60,7 +60,7 @@ test("Register a Netflix subscription via Add Expense + Recurring", async ({ pag
     amount: "19.99",
     cadence: "monthly",
   });
-  await page.goto("/subscriptions");
+  await page.goto("/recurring-transactions");
   await expect(page.getByText(merchant).first()).toBeVisible({ timeout: 5_000 });
   // The first sub in "All others" has a Pause button.
   const pause = page.getByRole("button", { name: /pause/i }).first();
