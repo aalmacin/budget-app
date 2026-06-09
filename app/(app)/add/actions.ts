@@ -113,6 +113,44 @@ export async function logExpenseAction(
     if (error) return { error: error.message };
   }
 
+  const templateId = ((raw.template_id as string | undefined) ?? "").trim();
+  const saveAsTemplate = raw.save_as_template === "on";
+  const overrideTemplate = raw.override_template === "on";
+
+  if ((templateId && overrideTemplate) || (!templateId && saveAsTemplate)) {
+    const merchant = (parsed.data.notes ?? "").trim();
+    if (!merchant) {
+      return { error: "Merchant is required to save as template" };
+    }
+    const templatePayload = {
+      merchant,
+      amount_cents: parsed.data.amount_cents.toString(),
+      category_id: parsed.data.category_id,
+      paid_by_member_id: parsed.data.paid_by_member_id ?? null,
+      for_member_id: parsed.data.for_member_id ?? null,
+      essential_pct: parsed.data.essential_pct ?? 100,
+      split_rule: parsed.data.split_rule ?? null,
+    };
+
+    if (templateId) {
+      const { error } = await supabase.rpc("update_saved_expense", {
+        p_id: templateId,
+        p: templatePayload,
+      });
+      if (error) {
+        return { error: `Expense saved, but updating template failed: ${error.message}` };
+      }
+    } else {
+      const { error } = await supabase.rpc("create_saved_expense", {
+        p: templatePayload,
+      });
+      if (error) {
+        return { error: `Expense saved, but template creation failed: ${error.message}` };
+      }
+    }
+    revalidatePath("/quick-add");
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath("/recurring-transactions");
