@@ -20,7 +20,7 @@ export function AddFAB() {
   }, [open]);
 
   return (
-    <div ref={containerRef} className="absolute right-5" style={{ bottom: 28 }}>
+    <div ref={containerRef} className="fixed right-5 z-40" style={{ bottom: 28 }}>
       {open && (
         <nav
           aria-label="Add options"

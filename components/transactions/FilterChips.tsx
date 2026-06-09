@@ -1,6 +1,5 @@
 "use client";
 
-import { Chip } from "@/components/ui/Chip";
 import { Input } from "@/components/ui/Input";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { filtersActions, type EssentialFilter } from "@/store/slices/filters";
@@ -10,9 +9,11 @@ type Props = {
   categories: Array<{ id: string; name: string }>;
 };
 
-const FILTERS: EssentialFilter[] = ["all", "essential", "treats"];
-
 type RangeKey = "all" | "this_month" | "last_month" | "this_year";
+
+const SELECT_CLASS =
+  "w-full h-12 px-4 rounded-2xl bg-surface text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-sage/40";
+const LABEL_CLASS = "text-xs text-muted font-mono uppercase tracking-wider";
 
 function isoDate(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -33,7 +34,6 @@ function rangeBounds(key: RangeKey): { from: string | null; to: string | null } 
     const lastMonth = m === 1 ? 12 : m - 1;
     return { from: isoDate(lastMonthYear, lastMonth, 1), to: isoDate(y, m, 1) };
   }
-  // this_year
   return { from: isoDate(y, 1, 1), to: isoDate(y + 1, 1, 1) };
 }
 
@@ -58,70 +58,88 @@ export function FilterChips({ members, categories }: Props) {
   };
 
   return (
-    <div className="px-4 space-y-2">
-      <Input
-        type="search"
-        placeholder="Search merchant or note"
-        value={filters.search}
-        onChange={(e) => dispatch(filtersActions.setSearch(e.target.value))}
-      />
+    <div className="px-4">
+      <div className="rounded-2xl bg-sand-soft p-3 shadow-sm space-y-2">
+        <Input
+          type="search"
+          placeholder="Search merchant or note"
+          value={filters.search}
+          onChange={(e) => dispatch(filtersActions.setSearch(e.target.value))}
+        />
 
-      <div className="flex gap-2 overflow-x-auto py-1">
-        <Chip selected={range === "all"} onClick={() => applyRange("all")}>All time</Chip>
-        <Chip selected={range === "this_month"} onClick={() => applyRange("this_month")}>This month</Chip>
-        <Chip selected={range === "last_month"} onClick={() => applyRange("last_month")}>Last month</Chip>
-        <Chip selected={range === "this_year"} onClick={() => applyRange("this_year")}>This year</Chip>
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto py-1">
-        {FILTERS.map((f) => (
-          <Chip
-            key={f}
-            selected={filters.essential === f}
-            onClick={() => dispatch(filtersActions.setEssential(f))}
-          >
-            {f === "all" ? "All" : f === "essential" ? "Essential" : "Treats"}
-          </Chip>
-        ))}
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto py-1">
-        <Chip
-          selected={filters.forMember === null}
-          onClick={() => dispatch(filtersActions.setForMember(null))}
-        >
-          Anyone
-        </Chip>
-        {members.map((m) => (
-          <Chip
-            key={m.id}
-            selected={filters.forMember === m.id}
-            onClick={() => dispatch(filtersActions.setForMember(m.id))}
-          >
-            for {m.display_name}
-          </Chip>
-        ))}
-      </div>
-
-      {categories.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto py-1">
-          <Chip
-            selected={filters.categoryId === null}
-            onClick={() => dispatch(filtersActions.setCategory(null))}
-          >
-            All categories
-          </Chip>
-          {categories.map((c) => (
-            <Chip
-              key={c.id}
-              selected={filters.categoryId === c.id}
-              onClick={() => dispatch(filtersActions.setCategory(c.id))}
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex flex-col gap-1">
+            <span className={LABEL_CLASS}>Range</span>
+            <select
+              value={range}
+              onChange={(e) => applyRange(e.target.value as RangeKey)}
+              className={SELECT_CLASS}
+              aria-label="Date range"
             >
-              {c.name}
-            </Chip>
-          ))}
+              <option value="all">All time</option>
+              <option value="this_month">This month</option>
+              <option value="last_month">Last month</option>
+              <option value="this_year">This year</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className={LABEL_CLASS}>Type</span>
+            <select
+              value={filters.essential}
+              onChange={(e) =>
+                dispatch(filtersActions.setEssential(e.target.value as EssentialFilter))
+              }
+              className={SELECT_CLASS}
+              aria-label="Essential or treats"
+            >
+              <option value="all">All</option>
+              <option value="essential">Essential</option>
+              <option value="treats">Treats</option>
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className={LABEL_CLASS}>For</span>
+            <select
+              value={filters.forMember ?? ""}
+              onChange={(e) =>
+                dispatch(filtersActions.setForMember(e.target.value === "" ? null : e.target.value))
+              }
+              className={SELECT_CLASS}
+              aria-label="For member"
+            >
+              <option value="">Anyone</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  for {m.display_name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {categories.length > 0 && (
+            <label className="flex flex-col gap-1">
+              <span className={LABEL_CLASS}>Category</span>
+              <select
+                value={filters.categoryId ?? ""}
+                onChange={(e) =>
+                  dispatch(filtersActions.setCategory(e.target.value === "" ? null : e.target.value))
+                }
+                className={SELECT_CLASS}
+                aria-label="Category"
+              >
+                <option value="">All categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
