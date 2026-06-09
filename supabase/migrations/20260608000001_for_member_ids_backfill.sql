@@ -1,5 +1,8 @@
 -- Add for_member_ids UUID[] to transaction and saved_expense, back-filling
 -- from for_member_id. The drop migration (20260608000002) follows next.
+-- NULL for_member_id rows keep NULL (not empty array) — intentional.
+
+BEGIN;
 
 ALTER TABLE public.transaction
   ADD COLUMN for_member_ids UUID[];
@@ -14,3 +17,5 @@ UPDATE public.transaction
 UPDATE public.saved_expense
    SET for_member_ids = ARRAY[for_member_id]
  WHERE for_member_id IS NOT NULL;
+
+COMMIT;
