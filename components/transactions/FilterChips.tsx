@@ -13,7 +13,7 @@ type RangeKey = "all" | "this_month" | "last_month" | "this_year";
 
 const SELECT_CLASS =
   "w-full h-12 px-4 rounded-2xl bg-surface text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-sage/40";
-const LABEL_CLASS = "text-xs text-muted font-mono uppercase tracking-wider";
+const LABEL_CLASS = "text-xs text-sand-light font-mono uppercase tracking-wider";
 
 function isoDate(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -59,7 +59,7 @@ export function FilterChips({ members, categories }: Props) {
 
   return (
     <div className="px-4">
-      <div className="rounded-2xl bg-sand-soft p-3 shadow-sm space-y-2">
+      <div className="rounded-2xl bg-sage p-3 shadow-sm space-y-2">
         <Input
           type="search"
           placeholder="Search merchant or note"
