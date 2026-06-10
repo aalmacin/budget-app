@@ -62,12 +62,14 @@ export async function logExpenseAction(
     categoryId = ensuredId as string;
   }
 
+  const forMemberIds = formData.getAll("for_member_ids[]") as string[];
+
   const parsed = logExpenseSchema.safeParse({
     ...raw,
     category_id: categoryId,
     essential_pct: raw.essential_pct ? Number(raw.essential_pct) : undefined,
     paid_by_member_id: raw.paid_by_member_id || undefined,
-    for_member_id: raw.for_member_id || undefined,
+    for_member_ids: forMemberIds.filter(Boolean),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
@@ -127,7 +129,7 @@ export async function logExpenseAction(
       amount_cents: parsed.data.amount_cents.toString(),
       category_id: parsed.data.category_id,
       paid_by_member_id: parsed.data.paid_by_member_id ?? null,
-      for_member_id: parsed.data.for_member_id ?? null,
+      for_member_ids: parsed.data.for_member_ids ?? [],
       essential_pct: parsed.data.essential_pct ?? 100,
       split_rule: parsed.data.split_rule ?? null,
     };

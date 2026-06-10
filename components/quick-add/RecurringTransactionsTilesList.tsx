@@ -38,7 +38,7 @@ export function RecurringTransactionsTilesList({ tiles }: Props) {
         category_id: tile.category_id,
         notes: tile.merchant,
         paid_by_member_id: tile.paid_by_member_id,
-        for_member_id: tile.for_member_id,
+        for_member_ids: tile.for_member_ids,
         essential_pct: tile.essential_pct,
         split_rule: tile.split_rule,
         subscription_id: tile.source_id,

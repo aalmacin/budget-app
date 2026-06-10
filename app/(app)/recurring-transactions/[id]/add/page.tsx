@@ -142,7 +142,7 @@ export default async function RecurringTransactionAddPage({
     category_id: row.category_id,
     category_name: row.category_name,
     paid_by_member_id: row.paid_by_member_id,
-    for_member_id: row.for_member_id,
+    for_member_ids: row.for_member_id ? [row.for_member_id] : [],
     essential_pct: row.essential_pct,
     split_rule: row.split_rule,
   };

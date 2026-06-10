@@ -15,7 +15,7 @@ type RawTxn = {
   category_id: string | null;
   category_name: string;
   notes: string;
-  for_member_id: string | null;
+  for_member_ids: string[] | null;
   for_member_display_name: string | null;
   paid_by_member_id: string | null;
   paid_by_display_name: string | null;
@@ -30,7 +30,7 @@ type RowWithPaid = ActivityRowData & {
   essential_pct: number;
   paid_by_display_name: string | null;
   category_id: string | null;
-  for_member_id: string | null;
+  for_member_ids: string[];
   paid_by_member_id: string | null;
   split_rule: string | null;
   income_source: string | null;
@@ -60,7 +60,7 @@ function toRows(data: RawTxn[]): RowWithPaid[] {
     essential_pct: r.essential_pct,
     paid_by_display_name: r.paid_by_display_name,
     category_id: r.category_id,
-    for_member_id: r.for_member_id,
+    for_member_ids: r.for_member_ids ?? [],
     paid_by_member_id: r.paid_by_member_id,
     split_rule: r.split_rule,
     income_source: r.income_source,
@@ -126,7 +126,7 @@ export function TransactionsList({
 
   const handleSave = async (
     id: string,
-    patch: Record<string, string | number | null>,
+    patch: Record<string, string | number | null | string[]>,
   ) => {
     const supabase = getSupabaseBrowserClient();
     await supabase.rpc("update_transaction", { p_id: id, p_patch: patch });
@@ -182,7 +182,7 @@ export function TransactionsList({
                       occurred_on: r.occurred_on,
                       category_id: r.category_id,
                       category_name: r.category_name,
-                      for_member_id: r.for_member_id,
+                      for_member_ids: r.for_member_ids,
                       paid_by_member_id: r.paid_by_member_id,
                       split_rule: r.split_rule,
                       income_source: r.income_source,

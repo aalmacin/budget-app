@@ -23,7 +23,7 @@ type RawTemplate = {
   amount_cents: number | string;
   category_id: string;
   paid_by_member_id: string | null;
-  for_member_id: string | null;
+  for_member_ids: string[] | null;
   essential_pct: number;
   split_rule: "adult_a" | "adult_b" | "50_50" | "by_income" | null;
 };
@@ -79,7 +79,7 @@ export default async function AddExpensePage({
         category_id: tplData.category_id,
         category_name: categoryName,
         paid_by_member_id: tplData.paid_by_member_id,
-        for_member_id: tplData.for_member_id,
+        for_member_ids: tplData.for_member_ids ?? [],
         essential_pct: tplData.essential_pct,
         split_rule: tplData.split_rule,
       };
