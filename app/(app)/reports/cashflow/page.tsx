@@ -15,9 +15,10 @@ type KPIs = {
   insights: string[];
 };
 
-const VALID_RANGES: ReportRange[] = ["30d", "90d", "ytd"];
+const VALID_RANGES: ReportRange[] = ["mtd", "30d", "90d", "ytd"];
 
 const RANGE_LABELS: Record<ReportRange, string> = {
+  mtd: "MTD",
   "30d": "30d",
   "90d": "90d",
   ytd: "YTD",
@@ -35,10 +36,12 @@ export default async function Page({
   const sp = await searchParams;
   const range: ReportRange = VALID_RANGES.includes(sp.range as ReportRange)
     ? (sp.range as ReportRange)
-    : "30d";
+    : "mtd";
+
+  const todayEdmonton = new Date().toLocaleDateString("en-CA", { timeZone: "America/Edmonton" });
 
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.rpc("cashflow_kpis", { p_range: range });
+  const { data } = await supabase.rpc("cashflow_kpis", { p_range: range, p_today: todayEdmonton });
   const kpi = (data ?? {}) as Partial<KPIs>;
 
   return (
