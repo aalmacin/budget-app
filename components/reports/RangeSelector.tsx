@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Chip } from "@/components/ui/Chip";
 
 const RANGES = [
+  { value: "mtd", label: "MTD" },
   { value: "30d", label: "30d" },
   { value: "90d", label: "90d" },
   { value: "ytd", label: "YTD" },

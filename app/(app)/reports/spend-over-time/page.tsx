@@ -7,9 +7,10 @@ export const metadata = { title: "Spend over time · Budget" };
 
 type RawRow = { bucket_start: string; spent_cents: number | string; income_cents: number | string };
 
-const VALID_RANGES: ReportRange[] = ["30d", "90d", "ytd"];
+const VALID_RANGES: ReportRange[] = ["mtd", "30d", "90d", "ytd"];
 
 const RANGE_LABELS: Record<ReportRange, string> = {
+  mtd: "Month to date",
   "30d": "Last 30 days",
   "90d": "Last 90 days",
   ytd: "Year to date",
@@ -23,10 +24,12 @@ export default async function Page({
   const sp = await searchParams;
   const range: ReportRange = VALID_RANGES.includes(sp.range as ReportRange)
     ? (sp.range as ReportRange)
-    : "30d";
+    : "mtd";
+
+  const todayEdmonton = new Date().toLocaleDateString("en-CA", { timeZone: "America/Edmonton" });
 
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.rpc("spend_over_time", { p_range: range });
+  const { data } = await supabase.rpc("spend_over_time", { p_range: range, p_today: todayEdmonton });
 
   const rows = ((data ?? []) as RawRow[]).map((r) => ({
     bucket_start: r.bucket_start,
