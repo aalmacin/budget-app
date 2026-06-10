@@ -52,6 +52,7 @@ export default async function QuickAddPage() {
         .filter((r) => r.source === "subscription")
         .map((r) => ({
           ...r,
+          for_member_ids: r.for_member_ids ?? [],
           amount_cents: BigInt(
             typeof r.amount_cents === "string"
               ? r.amount_cents
