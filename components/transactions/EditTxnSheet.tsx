@@ -22,7 +22,7 @@ export type EditableTxn = {
   occurred_on: string;
   category_id: string | null;
   category_name: string;
-  for_member_id: string | null;
+  for_member_ids: string[];
   paid_by_member_id: string | null;
   split_rule: string | null;
   income_source: string | null;
@@ -31,7 +31,7 @@ export type EditableTxn = {
 export type CategoryOption = { id: string; name: string };
 export type MemberOption = { id: string; display_name: string; role: "adult" | "kid" };
 
-type SavePatch = Record<string, string | number | null>;
+type SavePatch = Record<string, string | number | null | string[]>;
 
 type Props = {
   txn: EditableTxn | null;
@@ -92,7 +92,7 @@ function EditTxnSheetInner(props: InnerProps) {
   const [amount, setAmount] = useState<string>(centsToDollars(txn.amount_cents).toFixed(2));
   const [date, setDate] = useState<string>(txn.occurred_on);
   const [essential, setEssential] = useState<number>(txn.essential_pct);
-  const [forMember, setForMember] = useState<string | null>(txn.for_member_id);
+  const [forMember, setForMember] = useState<string[]>(txn.for_member_ids);
   const [splitRule, setSplitRule] = useState<SplitRule | null>(
     (txn.split_rule as SplitRule | null) ?? null,
   );
@@ -138,7 +138,7 @@ function EditTxnSheetInner(props: InnerProps) {
         return;
       }
       patch.category_id = categoryId;
-      patch.for_member_id = forMember;
+      patch.for_member_ids = forMember;
       patch.essential_pct = essential;
       patch.split_rule = splitRule;
       patch.paid_by_member_id =
