@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
+  { href: "/reports/monthly", label: "Monthly" },
   { href: "/reports/spend-over-time", label: "Spend" },
   { href: "/reports/cashflow", label: "Cashflow" },
   { href: "/reports/per-person", label: "Per-person" },
   { href: "/reports/essentials", label: "Essentials" },
-  { href: "/reports/monthly", label: "Monthly" },
 ];
 
 export function ReportsNav() {

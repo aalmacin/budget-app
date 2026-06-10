@@ -15,9 +15,10 @@ export default async function Page() {
   const currentYear  = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const { data } = await supabase.rpc("monthly_expense_comparison", {
+  const { data, error } = await supabase.rpc("monthly_expense_comparison", {
     p_today: now.toISOString().slice(0, 10),
   });
+  if (error) console.error("monthly_expense_comparison failed:", error.message);
 
   const rows = (data ?? []) as MonthRow[];
 
