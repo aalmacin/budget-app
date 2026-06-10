@@ -11,7 +11,7 @@ export type QuickAddTileData = {
   amount_cents: bigint;
   category_id: string;
   category_name: string;
-  for_member_id: string | null;
+  for_member_ids: string[];
   paid_by_member_id: string | null;
   essential_pct: number;
   split_rule: "adult_a" | "adult_b" | "50_50" | "by_income" | null;

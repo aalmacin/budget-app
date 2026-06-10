@@ -26,7 +26,7 @@ export type ExpensePrefill = {
   category_id: string;
   category_name: string;
   paid_by_member_id: string | null;
-  for_member_id: string | null;
+  for_member_ids: string[];
   essential_pct: number;
   split_rule: SplitRule | null;
 };
@@ -79,8 +79,8 @@ export function AddExpenseForm({
   const [amount, setAmount] = useState(
     prefill ? centsToDollars(prefill.amount_cents) : "0.00",
   );
-  const [forMember, setForMember] = useState<string | null>(
-    prefill?.for_member_id ?? null,
+  const [forMember, setForMember] = useState<string[]>(
+    prefill?.for_member_ids ?? [],
   );
   const [essentialPct, setEssentialPct] = useState<number>(
     prefill?.essential_pct ?? 100,
