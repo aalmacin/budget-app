@@ -154,6 +154,13 @@ export default async function DashboardPage() {
       {/* Essential vs treats split */}
       <div className="mx-4 mb-3 rounded-3xl bg-surface p-4 shadow-sm">
         <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted">
+          Expenses
+        </div>
+        <div className="font-mono text-lg text-ink mt-1">
+          {formatCAD(expense).replace("CA$", "$")}
+        </div>
+        <div className="border-t border-line my-3" />
+        <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted">
           Essential vs treats
         </div>
         <div className="flex items-baseline justify-between mt-1">
