@@ -8,6 +8,7 @@ const TABS = [
   { href: "/reports/cashflow", label: "Cashflow" },
   { href: "/reports/per-person", label: "Per-person" },
   { href: "/reports/essentials", label: "Essentials" },
+  { href: "/reports/monthly", label: "Monthly" },
 ];
 
 export function ReportsNav() {
