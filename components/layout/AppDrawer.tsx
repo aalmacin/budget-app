@@ -21,7 +21,7 @@ const LINKS: DrawerLink[] = [
   { href: "/dashboard", label: "Dashboard", section: "main" },
   { href: "/transactions", label: "Transactions", section: "money" },
   { href: "/budget", label: "Budget", section: "money" },
-  { href: "/reports/spend-over-time", label: "Reports", section: "money" },
+  { href: "/reports/monthly", label: "Reports", section: "money" },
   { href: "/recurring-transactions", label: "Recurring Transactions", section: "money" },
   { href: "/family", label: "Family", section: "household" },
   { href: "/settings", label: "Settings", section: "household" },
