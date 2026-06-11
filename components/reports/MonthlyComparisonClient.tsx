@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { formatCAD } from "@/lib/money";
 
@@ -32,6 +33,16 @@ export function formatMonthLabel(
     return `MTD (${MONTH_NAMES[month - 1]} ${year})`;
   }
   return `${MONTH_NAMES[month - 1]} ${year}`;
+}
+
+export function monthHref(
+  year: number,
+  month: number,
+  currentYear: number,
+  currentMonth: number,
+): string {
+  if (year === currentYear && month === currentMonth) return "/dashboard";
+  return `/history/${year}/${month}`;
 }
 
 export function buildColumnOrder(
@@ -196,7 +207,12 @@ export function MonthlyComparisonClient({
                   }
                 >
                   <td className="px-2 py-2 text-ink whitespace-nowrap">
-                    {formatMonthLabel(row.year, row.month, currentYear, currentMonth)}
+                    <Link
+                      href={monthHref(row.year, row.month, currentYear, currentMonth)}
+                      className="hover:underline"
+                    >
+                      {formatMonthLabel(row.year, row.month, currentYear, currentMonth)}
+                    </Link>
                   </td>
                   {columns.map((col) => (
                     <td key={col.id} className="px-2 py-2 text-right text-ink tabular-nums">
