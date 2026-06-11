@@ -3,6 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export async function setTimezoneAction(
+  timezone: string,
+): Promise<{ error?: string }> {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("set_household_timezone", {
+    p_timezone: timezone,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/settings");
+  return {};
+}
+
 export async function setCategoryEssentialPctAction(
   categoryId: string,
   pct: number,

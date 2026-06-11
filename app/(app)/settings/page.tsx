@@ -4,6 +4,7 @@ import { AppBar } from "@/components/ui/AppBar";
 import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { CategoryEssentialRuleList, type CategoryRule } from "@/components/settings/CategoryEssentialRuleList";
+import { TimezoneSelector } from "@/components/settings/TimezoneSelector";
 
 export const metadata = { title: "Settings · Budget" };
 export const dynamic = "force-dynamic";
@@ -18,14 +19,17 @@ export default async function SettingsPage() {
   // Principle III: clients call RPCs, never `.from()` against household tables.
   const { data: householdId } = await supabase.rpc("get_current_household");
 
-  const [{ data: splitData }, { data: membersData }, { data: categoriesData }] =
+  const [{ data: splitData }, { data: membersData }, { data: categoriesData }, { data: timezoneData }] =
     await Promise.all([
       householdId
         ? supabase.rpc("compute_income_split", { p_household_id: householdId })
         : Promise.resolve({ data: null }),
       supabase.rpc("list_household_members"),
       supabase.rpc("list_categories", { p_kind: "expense" }),
+      supabase.rpc("get_household_timezone"),
     ]);
+
+  const timezone = (timezoneData as string | null) ?? "UTC";
 
   const adults: MemberRow[] = ((membersData ?? []) as MemberRow[]).filter(
     (m) => m.role === "adult",
@@ -52,6 +56,13 @@ export default async function SettingsPage() {
           <div className="text-[11px] text-faint mt-0.5">
             Multi-currency is out of scope for v1.
           </div>
+        </section>
+
+        <section className="rounded-2xl bg-surface p-4 shadow-sm">
+          <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted">
+            Timezone
+          </div>
+          <TimezoneSelector current={timezone} />
         </section>
 
         <section className="rounded-2xl bg-surface p-4 shadow-sm">
