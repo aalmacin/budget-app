@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import {
   AddExpenseForm,
@@ -101,7 +100,7 @@ export default async function RecurringTransactionAddPage({
 
     return (
       <div className="pt-3">
-        <AppBar left={<MenuButton />} />
+        <AppBar />
         <PageTitle
           title={`Log ${row.merchant}`}
           subtitle={`Renewal was ${row.next_renewal_at}`}
@@ -150,7 +149,7 @@ export default async function RecurringTransactionAddPage({
 
   return (
     <div className="pt-3">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle
         title={`Log ${row.merchant}`}
         subtitle={`Renewal was ${row.next_renewal_at}`}

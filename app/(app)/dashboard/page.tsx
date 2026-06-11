@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { AddFAB } from "@/components/ui/AddFAB";
 import { SplitBar } from "@/components/ui/SplitBar";
 import { formatCAD } from "@/lib/money";
@@ -105,7 +104,6 @@ export default async function DashboardPage() {
       {householdId && <RealtimeRefresher householdId={householdId} />}
 
       <AppBar
-        left={<MenuButton />}
         right={
           <Link
             href="/transactions"

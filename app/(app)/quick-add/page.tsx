@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { IconButton } from "@/components/ui/IconButton";
 import { Icon } from "@/components/ui/icons";
@@ -63,7 +62,6 @@ export default async function QuickAddPage() {
   return (
     <div className="pt-3 pb-16">
       <AppBar
-        left={<MenuButton />}
         right={
           <Link href="/add" aria-label="Open full add form">
             <IconButton icon={Icon.plus(18)} aria-label="Open full add form" />

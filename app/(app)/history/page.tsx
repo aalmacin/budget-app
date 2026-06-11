@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 
 export const metadata = { title: "History · Budget" };
@@ -30,7 +29,7 @@ export default async function HistoryPage() {
 
   return (
     <div className="pt-3 pb-32">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle title="History" />
 
       {pastMonths.length === 0 ? (

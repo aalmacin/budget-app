@@ -1,6 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { AddFAB } from "@/components/ui/AddFAB";
 import { FilterChips } from "@/components/transactions/FilterChips";
@@ -46,7 +45,7 @@ export default async function TransactionsPage() {
 
   return (
     <div className="pt-3 pb-32 relative">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle title="Transactions" />
       <FilterChips members={filterMembers} categories={expenseCategories} />
       <div className="mt-3">

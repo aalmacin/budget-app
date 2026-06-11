@@ -1,6 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { BudgetClient } from "./BudgetClient";
 import type { CategoryRowData } from "@/components/budget/CategoryRow";
@@ -45,7 +44,7 @@ export default async function BudgetPage({
 
   return (
     <div className="pt-3 pb-16">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle title="Budget" subtitle="Monthly limits + progress" />
       <BudgetClient rows={rows} />
     </div>

@@ -1,6 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { FamilyClient } from "./FamilyClient";
 import type { MemberCardData } from "@/components/family/MemberCard";
@@ -71,7 +70,7 @@ export default async function FamilyPage() {
 
   return (
     <div className="pt-3 pb-16">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle title="Family" subtitle="Members + per-kid spend" />
       <FamilyClient
         adults={adults}

@@ -1,7 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { AddIncomeForm, type AdultOption } from "./AddIncomeForm";
 
 export const metadata = { title: "Add income · Budget" };
@@ -31,7 +30,7 @@ export default async function AddIncomePage() {
 
   return (
     <div className="pt-3">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle title="Add income" subtitle="Money in (net)" />
       <AddIncomeForm
         incomeCategoryId={incomeCategoryId}
