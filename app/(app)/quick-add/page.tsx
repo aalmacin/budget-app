@@ -60,7 +60,7 @@ export default async function QuickAddPage() {
         }));
 
   return (
-    <div className="pt-3 pb-16">
+    <div className="pt-3 pb-32">
       <AppBar
         right={
           <Link href="/add" aria-label="Open full add form">

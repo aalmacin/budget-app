@@ -43,7 +43,7 @@ export default async function BudgetPage({
       }));
 
   return (
-    <div className="pt-3 pb-16">
+    <div className="pt-3 pb-32">
       <AppBar />
       <PageTitle title="Budget" subtitle="Monthly limits + progress" />
       <BudgetClient rows={rows} />
