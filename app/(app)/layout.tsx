@@ -43,7 +43,9 @@ export default async function AppLayout({
   return (
     <ReduxProvider>
       <div className="min-h-svh bg-bg flex flex-col">
-        <main className="flex-1 relative w-full max-w-2xl mx-auto">{children}</main>
+        <main className="flex-1 relative w-full max-w-2xl mx-auto">
+          {children}
+        </main>
         <AppDrawer />
         <OnlineReplayMounter />
       </div>

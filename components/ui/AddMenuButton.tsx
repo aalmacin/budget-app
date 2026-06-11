@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icons";
+import { IconButton } from "@/components/ui/IconButton";
 
-export function AddFAB() {
+export function AddMenuButton() {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -20,11 +21,18 @@ export function AddFAB() {
   }, [open]);
 
   return (
-    <div ref={containerRef} className="fixed right-5 z-40" style={{ bottom: 28 }}>
+    <div ref={containerRef} className="relative">
+      <IconButton
+        icon={open ? Icon.close(18) : Icon.plus(18)}
+        aria-label={open ? "Close add menu" : "Open add menu"}
+        aria-expanded={open}
+        aria-haspopup="true"
+        onClick={() => setOpen((v) => !v)}
+      />
       {open && (
         <nav
           aria-label="Add options"
-          className="absolute bottom-[calc(100%+8px)] right-0 bg-surface rounded-2xl shadow-xl overflow-hidden min-w-[152px]"
+          className="absolute top-[calc(100%+8px)] right-0 z-40 bg-surface rounded-2xl shadow-xl overflow-hidden min-w-[152px]"
         >
           <Link
             href="/quick-add"
@@ -49,16 +57,6 @@ export function AddFAB() {
           </Link>
         </nav>
       )}
-      <button
-        type="button"
-        aria-label={open ? "Close add menu" : "Open add menu"}
-        aria-expanded={open}
-        aria-haspopup="true"
-        onClick={() => setOpen((v) => !v)}
-        className="h-14 w-14 rounded-full bg-sage text-white flex items-center justify-center shadow-[0_8px_24px_-6px_rgba(42,61,51,0.45)]"
-      >
-        {open ? Icon.close(20) : Icon.plus(20)}
-      </button>
     </div>
   );
 }

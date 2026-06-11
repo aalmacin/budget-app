@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { AddFAB } from "@/components/ui/AddFAB";
 import { SplitBar } from "@/components/ui/SplitBar";
 import { formatCAD } from "@/lib/money";
 import { ActivityRow, type ActivityRowData } from "@/components/transactions/ActivityRow";
@@ -100,19 +99,10 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <div className="pt-3 pb-32 relative">
+    <div className="pt-3 pb-32">
       {householdId && <RealtimeRefresher householdId={householdId} />}
 
-      <AppBar
-        right={
-          <Link
-            href="/transactions"
-            className="text-xs font-mono uppercase tracking-wider text-sage"
-          >
-            All
-          </Link>
-        }
-      />
+      <AppBar />
 
       {dueRows.length > 0 && <DueRecurringTransactionsCard rows={dueRows} />}
 
@@ -198,8 +188,6 @@ export default async function DashboardPage() {
           </ul>
         )}
       </div>
-
-      <AddFAB />
     </div>
   );
 }
