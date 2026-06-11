@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   formatMonthLabel,
   buildColumnOrder,
+  monthHref,
 } from "@/components/reports/MonthlyComparisonClient";
 
 describe("formatMonthLabel", () => {
@@ -44,5 +45,17 @@ describe("buildColumnOrder", () => {
   it("total column is always last and always present", () => {
     const cols = buildColumnOrder(new Set(), categories, people);
     expect(cols.at(-1)?.id).toBe("total");
+  });
+});
+
+describe("monthHref", () => {
+  it("links past months to the history detail page", () => {
+    expect(monthHref(2026, 5, 2026, 6)).toBe("/history/2026/5");
+    expect(monthHref(2025, 12, 2026, 6)).toBe("/history/2025/12");
+    expect(monthHref(2026, 1, 2026, 6)).toBe("/history/2026/1");
+  });
+
+  it("links the current month to the dashboard", () => {
+    expect(monthHref(2026, 6, 2026, 6)).toBe("/dashboard");
   });
 });

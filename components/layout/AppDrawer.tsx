@@ -20,6 +20,7 @@ type DrawerLink = {
 const LINKS: DrawerLink[] = [
   { href: "/dashboard", label: "Dashboard", section: "main" },
   { href: "/transactions", label: "Transactions", section: "money" },
+  { href: "/history", label: "History", section: "money" },
   { href: "/reports/monthly", label: "Reports", section: "money" },
   { href: "/recurring-transactions", label: "Recurring Transactions", section: "money" },
   { href: "/family", label: "Family", section: "household" },
