@@ -75,8 +75,8 @@ export default async function HistoryMonthPage({ params }: { params: Promise<Par
 
   const essentialRatio =
     essential + treats === 0n ? 0 : Number(essential) / Number(essential + treats);
-  const savedPct =
-    income === 0n ? 0 : Math.max(0, Math.round(Number(income - expense) / Number(income) * 100));
+  const incomeForPct = income === 0n ? 0.1 : Number(income);
+  const savedPct = Math.round(Number(income - expense) / incomeForPct * 100);
 
   const monthLabel = `${MONTH_NAMES[m - 1]} ${y}`;
 

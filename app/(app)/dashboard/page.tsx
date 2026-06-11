@@ -66,8 +66,8 @@ export default async function DashboardPage() {
     essential + treats === 0n ? 0 : Number(essential) / Number(essential + treats);
 
   const monthLabel = now.toLocaleString("en-CA", { month: "long" });
-  const savedPct =
-    income === 0n ? 0 : Math.max(0, Math.round(Number(income - expense) / Number(income) * 100));
+  const incomeForPct = income === 0n ? 0.1 : Number(income);
+  const savedPct = Math.round(Number(income - expense) / incomeForPct * 100);
 
   const recent: ActivityRowData[] = (summary.recent ?? []).map((r) => ({
     id: r.id,
