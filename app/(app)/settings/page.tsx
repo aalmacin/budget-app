@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { CategoryEssentialRuleList, type CategoryRule } from "@/components/settings/CategoryEssentialRuleList";
 import { TimezoneSelector } from "@/components/settings/TimezoneSelector";
@@ -44,7 +43,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="pt-3 pb-16">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle title="Settings" />
 
       <div className="px-4 space-y-4">

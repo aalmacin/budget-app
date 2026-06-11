@@ -93,7 +93,7 @@ export default async function HistoryMonthPage({ params }: { params: Promise<Par
   return (
     <div className="pt-3 pb-32">
       <AppBar
-        left={
+        right={
           <Link
             href="/history"
             className="text-xs font-mono uppercase tracking-wider text-sage"

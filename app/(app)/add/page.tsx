@@ -1,7 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import {
   AddExpenseForm,
   type CategoryOption,
@@ -91,7 +90,7 @@ export default async function AddExpensePage({
 
   return (
     <div className="pt-3">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle
         title={template ? `Add expense (from ${template.merchant})` : "Add expense"}
         subtitle="Money out"

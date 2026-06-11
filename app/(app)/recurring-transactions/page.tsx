@@ -1,6 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
-import { MenuButton } from "@/components/layout/AppDrawer";
 import { PageTitle } from "@/components/ui/PageTitle";
 import {
   RecurringTransactionsClient,
@@ -128,7 +127,7 @@ export default async function RecurringTransactionsPage() {
 
   return (
     <div className="pt-3 pb-16">
-      <AppBar left={<MenuButton />} />
+      <AppBar />
       <PageTitle title="Recurring Transactions" subtitle="Recurring expenses and income" />
       <RecurringTransactionsClient
         due={dueRows}

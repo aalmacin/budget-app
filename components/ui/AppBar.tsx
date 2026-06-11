@@ -1,27 +1,25 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
+import { MenuButton } from "@/components/layout/AppDrawer";
 
 type AppBarProps = {
-  left?: ReactNode;
-  center?: ReactNode;
+  /** Rendered to the left of the hamburger menu. */
   right?: ReactNode;
 };
 
-export function AppBar({ left, center, right }: AppBarProps) {
+export function AppBar({ right }: AppBarProps) {
   return (
-    <div className="flex items-center justify-between px-4 mb-3.5">
-      <div>{left}</div>
-      <div>{center}</div>
-      <div>
-        {right ?? (
-          <Image
-            src="/icon.svg"
-            alt="Budget logo"
-            width={40}
-            height={40}
-            className="w-10 h-10 rounded-xl shadow-sm"
-          />
-        )}
+    <div className="flex items-center justify-between px-4 pb-3 mb-3.5 border-b border-sage-soft">
+      <Image
+        src="/icon.svg"
+        alt="Budget logo"
+        width={40}
+        height={40}
+        className="w-10 h-10 rounded-xl shadow-sm"
+      />
+      <div className="flex items-center gap-3">
+        {right}
+        <MenuButton />
       </div>
     </div>
   );
