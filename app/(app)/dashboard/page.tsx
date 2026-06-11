@@ -102,16 +102,7 @@ export default async function DashboardPage() {
     <div className="pt-3 pb-32">
       {householdId && <RealtimeRefresher householdId={householdId} />}
 
-      <AppBar
-        right={
-          <Link
-            href="/transactions"
-            className="text-xs font-mono uppercase tracking-wider text-sage"
-          >
-            All
-          </Link>
-        }
-      />
+      <AppBar />
 
       {dueRows.length > 0 && <DueRecurringTransactionsCard rows={dueRows} />}
 

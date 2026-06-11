@@ -1,9 +1,6 @@
-import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { PageTitle } from "@/components/ui/PageTitle";
-import { IconButton } from "@/components/ui/IconButton";
-import { Icon } from "@/components/ui/icons";
 import { QuickAddTabs } from "./QuickAddTabs";
 import type { QuickAddTileData } from "@/components/quick-add/QuickAddTile";
 import type { SavedTileData } from "@/components/quick-add/SavedTilesGrid";
@@ -60,14 +57,8 @@ export default async function QuickAddPage() {
         }));
 
   return (
-    <div className="pt-3 pb-32">
-      <AppBar
-        right={
-          <Link href="/add" aria-label="Open full add form">
-            <IconButton icon={Icon.plus(18)} aria-label="Open full add form" />
-          </Link>
-        }
-      />
+    <div className="pt-3 pb-16">
+      <AppBar />
       <PageTitle title="Quick Add" subtitle="Tap a saved expense to log" />
       <QuickAddTabs saved={saved} subscriptions={subscriptions} />
     </div>

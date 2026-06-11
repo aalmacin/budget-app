@@ -42,7 +42,7 @@ export default async function SettingsPage() {
     adults.find((a) => a.id === id)?.display_name ?? "Adult";
 
   return (
-    <div className="pt-3 pb-32">
+    <div className="pt-3 pb-16">
       <AppBar />
       <PageTitle title="Settings" />
 

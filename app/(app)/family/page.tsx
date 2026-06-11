@@ -69,7 +69,7 @@ export default async function FamilyPage() {
   const monthLabel = now.toLocaleString("en-CA", { month: "long" });
 
   return (
-    <div className="pt-3 pb-32">
+    <div className="pt-3 pb-16">
       <AppBar />
       <PageTitle title="Family" subtitle="Members + per-kid spend" />
       <FamilyClient

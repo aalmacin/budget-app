@@ -4,7 +4,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppDrawer } from "@/components/layout/AppDrawer";
 import { OnlineReplayMounter } from "@/components/layout/OnlineReplayMounter";
 import { ReduxProvider } from "@/store/Provider";
-import { AddFAB } from "@/components/ui/AddFAB";
 
 /**
  * Authenticated route-group layout.
@@ -46,7 +45,6 @@ export default async function AppLayout({
       <div className="min-h-svh bg-bg flex flex-col">
         <main className="flex-1 relative w-full max-w-2xl mx-auto">
           {children}
-          <AddFAB />
         </main>
         <AppDrawer />
         <OnlineReplayMounter />
