@@ -57,8 +57,6 @@ export default async function DashboardPage() {
   const summary = (summaryData ?? {}) as Partial<DashboardSummary>;
   const householdId = (householdIdRaw as string | null) ?? undefined;
 
-  const leftToSpend = toBig(summary.left_to_spend_this_month_cents);
-  const balance = toBig(summary.balance_cents);
   const income = toBig(summary.income_month_cents);
   const expense = toBig(summary.month_expense_cents);
   const essential = toBig(summary.essential_spent_cents);
@@ -120,16 +118,16 @@ export default async function DashboardPage() {
 
       {dueRows.length > 0 && <DueRecurringTransactionsCard rows={dueRows} />}
 
-      {/* Sage hero — Left to spend */}
+      {/* Sage hero — Savings */}
       <div className="mx-4 mb-3 rounded-3xl bg-sage text-white p-5 shadow-sm">
         <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-white/70">
-          Left to spend · {monthLabel}
+          Savings · {monthLabel}
         </div>
         <div className="font-mono text-4xl font-medium tracking-tight mt-1">
-          {formatCAD(leftToSpend).replace("CA$", "$")}
+          {formatCAD(income - expense).replace("CA$", "$")}
         </div>
         <div className="text-xs text-white/70 mt-1">
-          Balance {formatCAD(balance).replace("CA$", "$")}
+          {savedPct}% of income
         </div>
       </div>
 
