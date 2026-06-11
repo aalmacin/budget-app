@@ -120,7 +120,7 @@ export default async function HistoryMonthPage({ params }: { params: Promise<Par
       <div className="mx-4 mb-3 grid grid-cols-2 gap-3">
         <div className="rounded-3xl bg-surface p-4 shadow-sm">
           <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted">
-            Income · {monthLabel}
+            Net Income · {monthLabel}
           </div>
           <div className="font-mono text-lg text-ink mt-1">
             {formatCAD(income).replace("CA$", "$")}
