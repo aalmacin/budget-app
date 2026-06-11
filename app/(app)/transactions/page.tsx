@@ -1,7 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { PageTitle } from "@/components/ui/PageTitle";
-import { AddFAB } from "@/components/ui/AddFAB";
 import { FilterChips } from "@/components/transactions/FilterChips";
 import { TransactionsList } from "./TransactionsList";
 
@@ -44,7 +43,7 @@ export default async function TransactionsPage() {
     .filter(Boolean);
 
   return (
-    <div className="pt-3 pb-32 relative">
+    <div className="pt-3 pb-32">
       <AppBar />
       <PageTitle title="Transactions" />
       <FilterChips members={filterMembers} categories={expenseCategories} />
@@ -56,7 +55,6 @@ export default async function TransactionsPage() {
           merchants={merchants}
         />
       </div>
-      <AddFAB />
     </div>
   );
 }
