@@ -99,7 +99,7 @@ export default async function RecurringTransactionAddPage({
     const bound = logRecurringTransactionIncomeAction.bind(null, id);
 
     return (
-      <div className="pt-3">
+      <div className="pt-3 pb-32">
         <AppBar />
         <PageTitle
           title={`Log ${row.merchant}`}
@@ -148,7 +148,7 @@ export default async function RecurringTransactionAddPage({
   const bound = logRecurringTransactionExpenseAction.bind(null, id);
 
   return (
-    <div className="pt-3">
+    <div className="pt-3 pb-32">
       <AppBar />
       <PageTitle
         title={`Log ${row.merchant}`}

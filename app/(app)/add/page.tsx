@@ -89,7 +89,7 @@ export default async function AddExpensePage({
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="pt-3">
+    <div className="pt-3 pb-32">
       <AppBar />
       <PageTitle
         title={template ? `Add expense (from ${template.merchant})` : "Add expense"}
