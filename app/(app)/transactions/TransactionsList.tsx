@@ -6,6 +6,7 @@ import { TxnRow } from "@/components/transactions/TxnRow";
 import { EditTxnSheet, type EditableTxn } from "@/components/transactions/EditTxnSheet";
 import type { ActivityRowData } from "@/components/transactions/ActivityRow";
 import { Button } from "@/components/ui/Button";
+import { formatCAD } from "@/lib/money";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { updateTransactionAction, deleteTransactionAction } from "./actions";
 
@@ -25,6 +26,8 @@ type RawTxn = {
   occurred_on: string;
   essential_pct: number;
   total_count: number | string;
+  total_income_cents: number | string;
+  total_expense_cents: number | string;
 };
 
 type RowWithPaid = ActivityRowData & {
@@ -74,6 +77,20 @@ function totalFrom(data: RawTxn[]): number {
   return typeof v === "string" ? Number(v) : v;
 }
 
+function centsFrom(value: number | string | undefined): bigint {
+  if (value === undefined) return 0n;
+  return BigInt(value);
+}
+
+type FilteredTotals = { income: bigint; expense: bigint };
+
+function totalsFrom(data: RawTxn[]): FilteredTotals {
+  return {
+    income: centsFrom(data[0]?.total_income_cents),
+    expense: centsFrom(data[0]?.total_expense_cents),
+  };
+}
+
 export function TransactionsList({
   initial,
   members,
@@ -82,6 +99,7 @@ export function TransactionsList({
 }: Props) {
   const [rows, setRows] = useState<RowWithPaid[]>(toRows(initial));
   const [total, setTotal] = useState<number>(totalFrom(initial));
+  const [totals, setTotals] = useState<FilteredTotals>(totalsFrom(initial));
   const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<EditableTxn | null>(null);
   const [loading, setLoading] = useState(false);
@@ -110,6 +128,7 @@ export function TransactionsList({
       const raw = (data ?? []) as RawTxn[];
       setRows(toRows(raw));
       setTotal(totalFrom(raw));
+      setTotals(totalsFrom(raw));
       setLoading(false);
     },
     [filters.search, filters.essential, filters.forMember, filters.categoryId, filters.fromDate, filters.toDate],
@@ -142,6 +161,9 @@ export function TransactionsList({
     await fetchPage(nextPage);
   };
 
+  const totalIncome = totals.income;
+  const totalExpenses = totals.expense;
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const firstIndex = total === 0 ? 0 : page * PAGE_SIZE + 1;
   const lastIndex = Math.min(total, (page + 1) * PAGE_SIZE);
@@ -156,6 +178,23 @@ export function TransactionsList({
 
   return (
     <>
+      <div className="px-4 mb-3 flex flex-wrap gap-x-6 gap-y-0.5 text-sm text-muted">
+        {totalIncome !== 0n && (
+          <div>
+            Total Income:{" "}
+            <span className="font-semibold text-ink tabular-nums">
+              {formatCAD(totalIncome).replace("CA$", "$")}
+            </span>
+          </div>
+        )}
+        <div>
+          Total Expenses:{" "}
+          <span className="font-semibold text-ink tabular-nums">
+            {formatCAD(totalExpenses).replace("CA$", "$")}
+          </span>
+        </div>
+      </div>
+
       {rows.length === 0 ? (
         <p className="text-sm text-muted text-center py-12">
           {loading ? "Loading…" : "No matching transactions."}

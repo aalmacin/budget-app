@@ -13,13 +13,26 @@ type FiltersState = {
   toDate: string | null;
 };
 
+/** Current-month bounds [first day, first day of next month) as YYYY-MM-DD.
+ * Mirrors FilterChips' "this_month" range so the dropdown reflects the default. */
+function thisMonthBounds(): { from: string; to: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  const nextY = m === 12 ? y + 1 : y;
+  const nextM = m === 12 ? 1 : m + 1;
+  const iso = (yy: number, mm: number, dd: number) =>
+    `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+  return { from: iso(y, m, 1), to: iso(nextY, nextM, 1) };
+}
+
 const initialState: FiltersState = {
   essential: "all",
   search: "",
   forMember: null,
   categoryId: null,
-  fromDate: null,
-  toDate: null,
+  fromDate: thisMonthBounds().from,
+  toDate: thisMonthBounds().to,
 };
 
 const filtersSlice = createSlice({

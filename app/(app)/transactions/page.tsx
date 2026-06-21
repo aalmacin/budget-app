@@ -13,12 +13,26 @@ import {
 export const metadata = { title: "Transactions · Budget" };
 export const dynamic = "force-dynamic";
 
+/** Current-month bounds [first day, first day of next month) as YYYY-MM-DD.
+ * Keeps the SSR initial fetch aligned with the filters slice default. */
+function thisMonthBounds(): { from: string; to: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  const nextY = m === 12 ? y + 1 : y;
+  const nextM = m === 12 ? 1 : m + 1;
+  const iso = (yy: number, mm: number, dd: number) =>
+    `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+  return { from: iso(y, m, 1), to: iso(nextY, nextM, 1) };
+}
+
 export default async function TransactionsPage() {
   const householdId = await getCurrentHousehold();
+  const { from, to } = thisMonthBounds();
 
   const [initial, membersData, expenseCategoriesData, merchantsData] = householdId
     ? await Promise.all([
-        cachedListTransactions(householdId, { limit: 50, offset: 0 }),
+        cachedListTransactions(householdId, { from, to, limit: 50, offset: 0 }),
         cachedListMembers(householdId),
         cachedListCategories(householdId, "expense"),
         cachedListMerchants(householdId),
