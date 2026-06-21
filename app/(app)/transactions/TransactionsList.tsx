@@ -7,6 +7,7 @@ import { EditTxnSheet, type EditableTxn } from "@/components/transactions/EditTx
 import type { ActivityRowData } from "@/components/transactions/ActivityRow";
 import { Button } from "@/components/ui/Button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { updateTransactionAction, deleteTransactionAction } from "./actions";
 
 type RawTxn = {
   id: string;
@@ -128,14 +129,12 @@ export function TransactionsList({
     id: string,
     patch: Record<string, string | number | null | string[]>,
   ) => {
-    const supabase = getSupabaseBrowserClient();
-    await supabase.rpc("update_transaction", { p_id: id, p_patch: patch });
+    await updateTransactionAction(id, patch);
     await fetchPage(page);
   };
 
   const handleDelete = async (id: string) => {
-    const supabase = getSupabaseBrowserClient();
-    await supabase.rpc("delete_transaction", { p_id: id });
+    await deleteTransactionAction(id);
     // If we just deleted the last row on the current page, step back one.
     const remainingOnPage = rows.length - 1;
     const nextPage = remainingOnPage === 0 && page > 0 ? page - 1 : page;

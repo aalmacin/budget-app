@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { PageTitle } from "@/components/ui/PageTitle";
+import { getCurrentHousehold, cachedListHistoryMonths } from "@/lib/supabase/cache";
 
 export const metadata = { title: "History · Budget" };
 export const dynamic = "force-dynamic";
@@ -14,14 +14,12 @@ const MONTH_NAMES = [
 type MonthRow = { year: number; month: number };
 
 export default async function HistoryPage() {
-  const supabase = await createSupabaseServerClient();
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const { data } = await supabase.rpc("monthly_expense_comparison", {
-    p_today: now.toISOString().slice(0, 10),
-  });
+  const householdId = await getCurrentHousehold();
+  const data = householdId ? await cachedListHistoryMonths(householdId) : [];
 
   const pastMonths = ((data ?? []) as MonthRow[])
     .filter((r) => !(r.year === currentYear && r.month === currentMonth))

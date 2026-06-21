@@ -1,11 +1,17 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { SplitBar } from "@/components/ui/SplitBar";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { formatCAD } from "@/lib/money";
 import { ActivityRow, type ActivityRowData } from "@/components/transactions/ActivityRow";
 import { RealtimeRefresher } from "./RealtimeRefresher";
 import { DueRecurringTransactionsCard, type DueRow } from "./DueRecurringTransactionsCard";
+import {
+  getCurrentHousehold,
+  cachedDashboardSummary,
+  cachedDueSubscriptions,
+} from "@/lib/supabase/cache";
 
 type DashboardSummary = {
   balance_cents: number | string;
@@ -33,79 +39,33 @@ function toBig(v: number | string | undefined | null): bigint {
 }
 
 export const metadata = { title: "Dashboard · Budget" };
+export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
-  const supabase = await createSupabaseServerClient();
+// --- Streaming sections ---
 
+async function HeroSection() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
+  const monthLabel = now.toLocaleString("en-CA", { month: "long" });
 
-  // Principle III: clients call RPCs, never `.from()` against household tables.
-  const [
-    { data: summaryData },
-    { data: householdIdRaw },
-    { data: dueSubsData },
-  ] = await Promise.all([
-    supabase.rpc("get_dashboard_summary", { p_year: year, p_month: month }),
-    supabase.rpc("get_current_household"),
-    supabase.rpc("list_due_subscriptions"),
-  ]);
+  const householdId = await getCurrentHousehold();
+  const summaryData = householdId
+    ? await cachedDashboardSummary(householdId, year, month)
+    : null;
 
   const summary = (summaryData ?? {}) as Partial<DashboardSummary>;
-  const householdId = (householdIdRaw as string | null) ?? undefined;
-
   const income = toBig(summary.income_month_cents);
   const expense = toBig(summary.month_expense_cents);
   const essential = toBig(summary.essential_spent_cents);
   const treats = toBig(summary.treats_spent_cents);
-
   const essentialRatio =
     essential + treats === 0n ? 0 : Number(essential) / Number(essential + treats);
-
-  const monthLabel = now.toLocaleString("en-CA", { month: "long" });
   const incomeForPct = income === 0n ? 0.1 : Number(income);
   const savedPct = Math.round(Number(income - expense) / incomeForPct * 100);
 
-  const recent: ActivityRowData[] = (summary.recent ?? []).map((r) => ({
-    id: r.id,
-    type: r.type,
-    amount_cents: toBig(r.amount_cents),
-    category_name: r.category_name,
-    notes: r.notes,
-    for_member_display_name: r.for_member_display_name,
-    occurred_on: r.occurred_on,
-  }));
-
-  type RawDueRow = {
-    id: string;
-    type: "expense" | "income";
-    merchant: string;
-    amount_cents: number | string;
-    category_name: string;
-    cadence: string;
-    next_renewal_at: string;
-    income_source: string | null;
-  };
-  const dueRows: DueRow[] = ((dueSubsData ?? []) as RawDueRow[]).map((r) => ({
-    id: r.id,
-    type: r.type,
-    merchant: r.merchant,
-    amount_cents: toBig(r.amount_cents),
-    cadence: r.cadence,
-    next_renewal_at: r.next_renewal_at,
-    category_name: r.category_name,
-    income_source: r.income_source,
-  }));
-
   return (
-    <div className="pt-3 pb-32">
-      {householdId && <RealtimeRefresher householdId={householdId} />}
-
-      <AppBar />
-
-      {dueRows.length > 0 && <DueRecurringTransactionsCard rows={dueRows} />}
-
+    <>
       {/* Sage hero — Savings */}
       <div className="mx-4 mb-3 rounded-3xl bg-sage text-white p-5 shadow-sm">
         <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-white/70">
@@ -163,33 +123,131 @@ export default async function DashboardPage() {
           <SplitBar essential={essentialRatio} />
         </div>
       </div>
+    </>
+  );
+}
 
-      {/* Recent activity */}
-      <div className="mx-4 rounded-3xl bg-surface p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted">
-            Recent activity
-          </div>
-          <Link href="/transactions" className="text-xs text-sage">
-            See all
-          </Link>
+async function RecentActivitySection() {
+  const now = new Date();
+  const householdId = await getCurrentHousehold();
+  const summaryData = householdId
+    ? await cachedDashboardSummary(householdId, now.getFullYear(), now.getMonth() + 1)
+    : null;
+
+  const summary = (summaryData ?? {}) as Partial<DashboardSummary>;
+  const recent: ActivityRowData[] = (summary.recent ?? []).map((r) => ({
+    id: r.id,
+    type: r.type,
+    amount_cents: toBig(r.amount_cents),
+    category_name: r.category_name,
+    notes: r.notes,
+    for_member_display_name: r.for_member_display_name,
+    occurred_on: r.occurred_on,
+  }));
+
+  return (
+    <div className="mx-4 rounded-3xl bg-surface p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted">
+          Recent activity
         </div>
-        {recent.length === 0 ? (
-          <p className="text-sm text-muted py-4 text-center">
-            No transactions yet — tap the + to add the first one.
-          </p>
-        ) : (
-          <ul className="divide-y divide-line/40">
-            {recent.map((r) => (
-              <li key={r.id}>
-                <ActivityRow row={r} />
-              </li>
-            ))}
-          </ul>
-        )}
+        <Link href="/transactions" className="text-xs text-sage">
+          See all
+        </Link>
       </div>
+      {recent.length === 0 ? (
+        <p className="text-sm text-muted py-4 text-center">
+          No transactions yet — tap the + to add the first one.
+        </p>
+      ) : (
+        <ul className="divide-y divide-line/40">
+          {recent.map((r) => (
+            <li key={r.id}>
+              <ActivityRow row={r} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
-export const dynamic = "force-dynamic";
+async function DueSubscriptionsSection() {
+  const householdId = await getCurrentHousehold();
+
+  type RawDueRow = {
+    id: string;
+    type: "expense" | "income";
+    merchant: string;
+    amount_cents: number | string;
+    category_name: string;
+    cadence: string;
+    next_renewal_at: string;
+    income_source: string | null;
+  };
+
+  const dueSubsData = householdId ? await cachedDueSubscriptions(householdId) : [];
+  const dueRows: DueRow[] = ((dueSubsData ?? []) as RawDueRow[]).map((r) => ({
+    id: r.id,
+    type: r.type,
+    merchant: r.merchant,
+    amount_cents: toBig(r.amount_cents),
+    cadence: r.cadence,
+    next_renewal_at: r.next_renewal_at,
+    category_name: r.category_name,
+    income_source: r.income_source,
+  }));
+
+  if (dueRows.length === 0) return null;
+  return <DueRecurringTransactionsCard rows={dueRows} />;
+}
+
+async function RealtimeSection() {
+  const householdId = await getCurrentHousehold();
+  if (!householdId) return null;
+  return <RealtimeRefresher householdId={householdId} />;
+}
+
+export default function DashboardPage() {
+  return (
+    <div className="pt-3 pb-32">
+      <Suspense fallback={null}>
+        <RealtimeSection />
+      </Suspense>
+
+      <AppBar />
+
+      {/* Due subscriptions stream in independently */}
+      <Suspense fallback={null}>
+        <DueSubscriptionsSection />
+      </Suspense>
+
+      {/* Hero stats — stream in as one unit */}
+      <Suspense
+        fallback={
+          <div className="px-4 space-y-3">
+            <Skeleton className="h-28 w-full rounded-3xl" />
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-20 rounded-3xl" />
+              <Skeleton className="h-20 rounded-3xl" />
+            </div>
+            <Skeleton className="h-32 w-full rounded-3xl" />
+          </div>
+        }
+      >
+        <HeroSection />
+      </Suspense>
+
+      {/* Recent activity streams in last */}
+      <Suspense
+        fallback={
+          <div className="mx-4">
+            <Skeleton className="h-48 w-full rounded-3xl" />
+          </div>
+        }
+      >
+        <RecentActivitySection />
+      </Suspense>
+    </div>
+  );
+}

@@ -1,28 +1,25 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   MonthlyComparisonClient,
   type MonthRow,
   type CategorySummary,
   type PersonSummary,
 } from "@/components/reports/MonthlyComparisonClient";
+import { getCurrentHousehold, cachedMonthlyExpenseComparison } from "@/lib/supabase/cache";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Monthly · Budget" };
 
 export default async function Page() {
-  const supabase = await createSupabaseServerClient();
   const now = new Date();
   const currentYear  = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
+  const today = now.toISOString().slice(0, 10);
 
-  const { data, error } = await supabase.rpc("monthly_expense_comparison", {
-    p_today: now.toISOString().slice(0, 10),
-  });
-  if (error) console.error("monthly_expense_comparison failed:", error.message);
+  const householdId = await getCurrentHousehold();
+  const data = householdId ? await cachedMonthlyExpenseComparison(householdId, today) : [];
 
   const rows = (data ?? []) as MonthRow[];
 
-  // Collect the union of all categories and people across all months
   const categoryMap = new Map<string, string>();
   const peopleMap   = new Map<string, string>();
   for (const row of rows) {

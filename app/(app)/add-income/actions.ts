@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentHousehold, finTag, txnTag, recTag } from "@/lib/supabase/cache";
 import {
   logIncomeSchema,
   recurringSchema,
@@ -61,8 +62,11 @@ export async function logIncomeAction(
     if (error) return { error: error.message };
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/transactions");
-  revalidatePath("/recurring-transactions");
+  const hid = await getCurrentHousehold();
+  if (hid) {
+    updateTag(finTag(hid));
+    updateTag(txnTag(hid));
+    updateTag(recTag(hid));
+  }
   redirect("/dashboard");
 }

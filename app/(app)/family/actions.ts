@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentHousehold, mbrTag, finTag } from "@/lib/supabase/cache";
 
 export type AddAdultResult = { status?: string; error?: string };
 
@@ -11,7 +12,8 @@ export async function addAdultAction(email: string): Promise<AddAdultResult> {
     p_email: email,
   });
   if (error) return { error: error.message };
-  revalidatePath("/family");
+  const hid = await getCurrentHousehold();
+  if (hid) updateTag(mbrTag(hid));
   const row = Array.isArray(data) ? data[0] : data;
   return { status: (row?.status as string | undefined) ?? "inserted" };
 }
@@ -23,7 +25,8 @@ export async function addKidAction(displayName: string, ageYears: number): Promi
     p_age_years: ageYears,
   });
   if (error) return { error: error.message };
-  revalidatePath("/family");
+  const hid = await getCurrentHousehold();
+  if (hid) updateTag(mbrTag(hid));
   return {};
 }
 
@@ -33,8 +36,11 @@ export async function removeMemberAction(memberId: string): Promise<{ error?: st
     p_member_id: memberId,
   });
   if (error) return { error: error.message };
-  revalidatePath("/family");
-  revalidatePath("/dashboard");
+  const hid = await getCurrentHousehold();
+  if (hid) {
+    updateTag(mbrTag(hid));
+    updateTag(finTag(hid));
+  }
   return {};
 }
 
@@ -48,6 +54,7 @@ export async function updateDisplayNameAction(
     p_display_name: displayName,
   });
   if (error) return { error: error.message };
-  revalidatePath("/family");
+  const hid = await getCurrentHousehold();
+  if (hid) updateTag(mbrTag(hid));
   return {};
 }

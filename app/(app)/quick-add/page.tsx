@@ -1,9 +1,9 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { QuickAddTabs } from "./QuickAddTabs";
 import type { QuickAddTileData } from "@/components/quick-add/QuickAddTile";
 import type { SavedTileData } from "@/components/quick-add/SavedTilesGrid";
+import { getCurrentHousehold, cachedListSavedExpenses, cachedListQuickAddOptions } from "@/lib/supabase/cache";
 
 export const metadata = { title: "Quick Add · Budget" };
 export const dynamic = "force-dynamic";
@@ -21,40 +21,38 @@ type RawSub = Omit<QuickAddTileData, "amount_cents"> & {
 };
 
 export default async function QuickAddPage() {
-  const supabase = await createSupabaseServerClient();
+  const householdId = await getCurrentHousehold();
 
-  const [savedRes, subsRes] = await Promise.all([
-    supabase.rpc("list_saved_expenses"),
-    supabase.rpc("list_quick_add_options", { p_limit: 12 }),
-  ]);
+  const [savedData, subsData] = householdId
+    ? await Promise.all([
+        cachedListSavedExpenses(householdId),
+        cachedListQuickAddOptions(householdId, 12),
+      ])
+    : [[], []];
 
-  const saved: SavedTileData[] = savedRes.error
-    ? []
-    : ((savedRes.data ?? []) as RawSaved[]).map((r) => ({
-        id: r.id,
-        merchant: r.merchant,
-        category_id: r.category_id,
-        category_name: r.category_name,
-        amount_cents: BigInt(
-          typeof r.amount_cents === "string"
-            ? r.amount_cents
-            : Math.trunc(r.amount_cents),
-        ),
-      }));
+  const saved: SavedTileData[] = ((savedData ?? []) as RawSaved[]).map((r) => ({
+    id: r.id,
+    merchant: r.merchant,
+    category_id: r.category_id,
+    category_name: r.category_name,
+    amount_cents: BigInt(
+      typeof r.amount_cents === "string"
+        ? r.amount_cents
+        : Math.trunc(r.amount_cents),
+    ),
+  }));
 
-  const subscriptions: QuickAddTileData[] = subsRes.error
-    ? []
-    : ((subsRes.data ?? []) as RawSub[])
-        .filter((r) => r.source === "subscription")
-        .map((r) => ({
-          ...r,
-          for_member_ids: r.for_member_ids ?? [],
-          amount_cents: BigInt(
-            typeof r.amount_cents === "string"
-              ? r.amount_cents
-              : Math.trunc(r.amount_cents),
-          ),
-        }));
+  const subscriptions: QuickAddTileData[] = ((subsData ?? []) as RawSub[])
+    .filter((r) => r.source === "subscription")
+    .map((r) => ({
+      ...r,
+      for_member_ids: r.for_member_ids ?? [],
+      amount_cents: BigInt(
+        typeof r.amount_cents === "string"
+          ? r.amount_cents
+          : Math.trunc(r.amount_cents),
+      ),
+    }));
 
   return (
     <div className="pt-3 pb-16">

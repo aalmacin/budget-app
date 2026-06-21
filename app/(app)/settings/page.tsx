@@ -1,9 +1,15 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { CategoryEssentialRuleList, type CategoryRule } from "@/components/settings/CategoryEssentialRuleList";
 import { TimezoneSelector } from "@/components/settings/TimezoneSelector";
+import {
+  getCurrentHousehold,
+  cachedListMembers,
+  cachedListCategories,
+  cachedHouseholdTimezone,
+  cachedComputeIncomeSplit,
+} from "@/lib/supabase/cache";
 
 export const metadata = { title: "Settings · Budget" };
 export const dynamic = "force-dynamic";
@@ -13,22 +19,23 @@ type MemberRow = { id: string; display_name: string; role?: string };
 type CategoryRow = { id: string; name: string; default_essential_pct: number };
 
 export default async function SettingsPage() {
-  const supabase = await createSupabaseServerClient();
+  const householdId = await getCurrentHousehold();
 
-  // Principle III: clients call RPCs, never `.from()` against household tables.
-  const { data: householdId } = await supabase.rpc("get_current_household");
+  if (!householdId) {
+    return (
+      <div className="pt-3 pb-16">
+        <AppBar />
+        <PageTitle title="Settings" />
+      </div>
+    );
+  }
 
-  const [{ data: splitData }, { data: membersData }, { data: categoriesData }, { data: timezoneData }] =
-    await Promise.all([
-      householdId
-        ? supabase.rpc("compute_income_split", { p_household_id: householdId })
-        : Promise.resolve({ data: null }),
-      supabase.rpc("list_household_members"),
-      supabase.rpc("list_categories", { p_kind: "expense" }),
-      supabase.rpc("get_household_timezone"),
-    ]);
-
-  const timezone = (timezoneData as string | null) ?? "UTC";
+  const [splitData, membersData, categoriesData, timezone] = await Promise.all([
+    cachedComputeIncomeSplit(householdId),
+    cachedListMembers(householdId),
+    cachedListCategories(householdId, "expense"),
+    cachedHouseholdTimezone(householdId),
+  ]);
 
   const adults: MemberRow[] = ((membersData ?? []) as MemberRow[]).filter(
     (m) => m.role === "adult",

@@ -1,29 +1,29 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { FilterChips } from "@/components/transactions/FilterChips";
 import { TransactionsList } from "./TransactionsList";
+import {
+  getCurrentHousehold,
+  cachedListTransactions,
+  cachedListMembers,
+  cachedListCategories,
+  cachedListMerchants,
+} from "@/lib/supabase/cache";
 
 export const metadata = { title: "Transactions · Budget" };
 export const dynamic = "force-dynamic";
 
 export default async function TransactionsPage() {
-  const supabase = await createSupabaseServerClient();
+  const householdId = await getCurrentHousehold();
 
-  // Principle III: clients call RPCs, never `.from()` against household tables.
-  const [
-    { data: initial },
-    { data: membersData },
-    { data: expenseCategoriesData },
-    { data: merchantsData },
-  ] = await Promise.all([
-    supabase.rpc("list_transactions", {
-      p_filters: { limit: 50, offset: 0 },
-    }),
-    supabase.rpc("list_household_members"),
-    supabase.rpc("list_categories", { p_kind: "expense" }),
-    supabase.rpc("list_merchants"),
-  ]);
+  const [initial, membersData, expenseCategoriesData, merchantsData] = householdId
+    ? await Promise.all([
+        cachedListTransactions(householdId, { limit: 50, offset: 0 }),
+        cachedListMembers(householdId),
+        cachedListCategories(householdId, "expense"),
+        cachedListMerchants(householdId),
+      ])
+    : [[], [], [], []];
 
   type MemberRow = { id: string; display_name: string; role: "adult" | "kid" };
   type CategoryRow = { id: string; name: string };

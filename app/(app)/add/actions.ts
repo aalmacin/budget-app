@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentHousehold, finTag, txnTag, catTag, mchTag, recTag, qaTag } from "@/lib/supabase/cache";
 import { logExpenseSchema, recurringSchema } from "@/lib/validators/transaction";
 
 export type LogExpenseState = { error: string | null };
@@ -31,7 +32,8 @@ export async function createExpenseCategoryAction(
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Could not create category" };
   }
-  revalidatePath("/add");
+  const hid = await getCurrentHousehold();
+  if (hid) updateTag(catTag(hid));
   return { ok: true, id: data as string, name: trimmed };
 }
 
@@ -150,11 +152,16 @@ export async function logExpenseAction(
         return { error: `Expense saved, but template creation failed: ${error.message}` };
       }
     }
-    revalidatePath("/quick-add");
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/transactions");
-  revalidatePath("/recurring-transactions");
+  const hid = await getCurrentHousehold();
+  if (hid) {
+    updateTag(finTag(hid));
+    updateTag(txnTag(hid));
+    updateTag(catTag(hid));
+    updateTag(mchTag(hid));
+    updateTag(recTag(hid));
+    updateTag(qaTag(hid));
+  }
   redirect("/dashboard");
 }

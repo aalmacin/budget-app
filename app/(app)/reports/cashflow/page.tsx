@@ -1,6 +1,6 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatCAD } from "@/lib/money";
 import { RangeSelector, type ReportRange } from "@/components/reports/RangeSelector";
+import { getCurrentHousehold, cachedCashflowKpis } from "@/lib/supabase/cache";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Cashflow · Budget" };
@@ -39,9 +39,8 @@ export default async function Page({
     : "mtd";
 
   const todayEdmonton = new Date().toLocaleDateString("en-CA", { timeZone: "America/Edmonton" });
-
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.rpc("cashflow_kpis", { p_range: range, p_today: todayEdmonton });
+  const householdId = await getCurrentHousehold();
+  const data = householdId ? await cachedCashflowKpis(householdId, range, todayEdmonton) : {};
   const kpi = (data ?? {}) as Partial<KPIs>;
 
   return (

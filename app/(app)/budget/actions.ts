@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentHousehold, finTag, bgtTag } from "@/lib/supabase/cache";
 
 export async function setCategoryBudgetAction(
   categoryId: string,
@@ -13,7 +14,10 @@ export async function setCategoryBudgetAction(
     p_monthly_budget_cents: cents === null ? null : cents.toString(),
   });
   if (error) return { error: error.message };
-  revalidatePath("/budget");
-  revalidatePath("/dashboard");
+  const hid = await getCurrentHousehold();
+  if (hid) {
+    updateTag(bgtTag(hid));
+    updateTag(finTag(hid));
+  }
   return {};
 }
