@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentHousehold, finTag, txnTag, recTag } from "@/lib/supabase/cache";
 import {
   logExpenseSchema,
   logIncomeSchema,
@@ -14,7 +15,8 @@ export async function pauseRecurringTransactionAction(id: string) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("pause_subscription", { p_id: id });
   if (error) return { error: error.message };
-  revalidatePath("/recurring-transactions");
+  const hid = await getCurrentHousehold();
+  if (hid) updateTag(recTag(hid));
   return {};
 }
 
@@ -22,7 +24,8 @@ export async function resumeRecurringTransactionAction(id: string) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("resume_subscription", { p_id: id });
   if (error) return { error: error.message };
-  revalidatePath("/recurring-transactions");
+  const hid = await getCurrentHousehold();
+  if (hid) updateTag(recTag(hid));
   return {};
 }
 
@@ -30,8 +33,11 @@ export async function skipRecurringTransactionOccurrenceAction(id: string): Prom
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("skip_subscription_occurrence", { p_id: id });
   if (error) return { error: error.message };
-  revalidatePath("/recurring-transactions");
-  revalidatePath("/dashboard");
+  const hid = await getCurrentHousehold();
+  if (hid) {
+    updateTag(recTag(hid));
+    updateTag(finTag(hid));
+  }
   return {};
 }
 
@@ -76,9 +82,12 @@ export async function logRecurringTransactionExpenseAction(
   });
   if (error) return { error: error.message };
 
-  revalidatePath("/dashboard");
-  revalidatePath("/recurring-transactions");
-  revalidatePath("/transactions");
+  const hid = await getCurrentHousehold();
+  if (hid) {
+    updateTag(finTag(hid));
+    updateTag(txnTag(hid));
+    updateTag(recTag(hid));
+  }
   redirect("/dashboard");
 }
 
@@ -106,8 +115,11 @@ export async function logRecurringTransactionIncomeAction(
   });
   if (error) return { error: error.message };
 
-  revalidatePath("/dashboard");
-  revalidatePath("/recurring-transactions");
-  revalidatePath("/transactions");
+  const hid = await getCurrentHousehold();
+  if (hid) {
+    updateTag(finTag(hid));
+    updateTag(txnTag(hid));
+    updateTag(recTag(hid));
+  }
   redirect("/dashboard");
 }

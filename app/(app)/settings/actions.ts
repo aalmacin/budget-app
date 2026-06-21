@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { updateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentHousehold, catTag, mbrTag } from "@/lib/supabase/cache";
 
 export async function setTimezoneAction(
   timezone: string,
@@ -11,7 +12,8 @@ export async function setTimezoneAction(
     p_timezone: timezone,
   });
   if (error) return { error: error.message };
-  revalidatePath("/settings");
+  const hid = await getCurrentHousehold();
+  if (hid) updateTag(mbrTag(hid));
   return {};
 }
 
@@ -25,6 +27,7 @@ export async function setCategoryEssentialPctAction(
     p_pct: pct,
   });
   if (error) return { error: error.message };
-  revalidatePath("/settings");
+  const hid = await getCurrentHousehold();
+  if (hid) updateTag(catTag(hid));
   return {};
 }

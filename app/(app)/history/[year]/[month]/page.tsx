@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { SplitBar } from "@/components/ui/SplitBar";
 import { formatCAD } from "@/lib/money";
 import { ActivityRow, type ActivityRowData } from "@/components/transactions/ActivityRow";
+import {
+  getCurrentHousehold,
+  cachedDashboardSummary,
+  cachedHistoryMonthTransactions,
+} from "@/lib/supabase/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -52,19 +56,14 @@ export default async function HistoryMonthPage({ params }: { params: Promise<Par
 
   if (isNaN(y) || isNaN(m) || m < 1 || m > 12) notFound();
 
-  const monthStart = `${y}-${String(m).padStart(2, "0")}-01`;
-  const nextMonth = m === 12 ? 1 : m + 1;
-  const nextYear = m === 12 ? y + 1 : y;
-  const monthEnd = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+  const householdId = await getCurrentHousehold();
 
-  const supabase = await createSupabaseServerClient();
-
-  const [{ data: summaryData }, { data: txData }] = await Promise.all([
-    supabase.rpc("get_dashboard_summary", { p_year: y, p_month: m }),
-    supabase.rpc("list_transactions", {
-      p_filters: { from: monthStart, to: monthEnd, limit: 1000 },
-    }),
-  ]);
+  const [summaryData, txData] = householdId
+    ? await Promise.all([
+        cachedDashboardSummary(householdId, y, m),
+        cachedHistoryMonthTransactions(householdId, y, m),
+      ])
+    : [null, []];
 
   const summary = (summaryData ?? {}) as Partial<DashboardSummary>;
 
@@ -103,7 +102,6 @@ export default async function HistoryMonthPage({ params }: { params: Promise<Par
         }
       />
 
-      {/* Sage hero */}
       <div className="mx-4 mb-3 rounded-3xl bg-sage text-white p-5 shadow-sm">
         <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-white/70">
           Savings · {monthLabel}
@@ -116,7 +114,6 @@ export default async function HistoryMonthPage({ params }: { params: Promise<Par
         </div>
       </div>
 
-      {/* Income / Saved */}
       <div className="mx-4 mb-3 grid grid-cols-2 gap-3">
         <div className="rounded-3xl bg-surface p-4 shadow-sm">
           <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted">
@@ -134,7 +131,6 @@ export default async function HistoryMonthPage({ params }: { params: Promise<Par
         </div>
       </div>
 
-      {/* Expenses / Essential vs treats */}
       <div className="mx-4 mb-3 rounded-3xl bg-surface p-4 shadow-sm">
         <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted">
           Expenses
@@ -161,7 +157,6 @@ export default async function HistoryMonthPage({ params }: { params: Promise<Par
         </div>
       </div>
 
-      {/* All activity for the month */}
       <div className="mx-4 rounded-3xl bg-surface p-4 shadow-sm">
         <div className="text-[11px] font-mono uppercase tracking-[1.4px] text-muted mb-2">
           Activity

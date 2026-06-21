@@ -1,6 +1,6 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EssentialsDonut } from "@/components/reports/charts";
 import { formatCAD } from "@/lib/money";
+import { getCurrentHousehold, cachedEssentialsBreakdown } from "@/lib/supabase/cache";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Essentials · Budget" };
@@ -29,12 +29,11 @@ function toBig(v: number | string): bigint {
 }
 
 export default async function Page() {
-  const supabase = await createSupabaseServerClient();
   const now = new Date();
-  const { data } = await supabase.rpc("essentials_breakdown", {
-    p_year: now.getFullYear(),
-    p_month: now.getMonth() + 1,
-  });
+  const householdId = await getCurrentHousehold();
+  const data = householdId
+    ? await cachedEssentialsBreakdown(householdId, now.getFullYear(), now.getMonth() + 1)
+    : {};
   const p = (data ?? {}) as Partial<Payload>;
 
   const donut = [

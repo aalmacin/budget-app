@@ -1,6 +1,6 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SpendOverTimeChart } from "@/components/reports/charts";
 import { RangeSelector, type ReportRange } from "@/components/reports/RangeSelector";
+import { getCurrentHousehold, cachedSpendOverTime } from "@/lib/supabase/cache";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Spend over time · Budget" };
@@ -27,9 +27,8 @@ export default async function Page({
     : "mtd";
 
   const todayEdmonton = new Date().toLocaleDateString("en-CA", { timeZone: "America/Edmonton" });
-
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.rpc("spend_over_time", { p_range: range, p_today: todayEdmonton });
+  const householdId = await getCurrentHousehold();
+  const data = householdId ? await cachedSpendOverTime(householdId, range, todayEdmonton) : [];
 
   const rows = ((data ?? []) as RawRow[]).map((r) => ({
     bucket_start: r.bucket_start,

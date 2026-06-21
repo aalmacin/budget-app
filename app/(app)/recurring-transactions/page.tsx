@@ -1,4 +1,3 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { AppBar } from "@/components/ui/AppBar";
 import { PageTitle } from "@/components/ui/PageTitle";
 import {
@@ -9,6 +8,13 @@ import {
   type Overlap,
 } from "./RecurringTransactionsClient";
 import type { SplitRule } from "@/components/transactions/SplitRuleChips";
+import {
+  getCurrentHousehold,
+  cachedListSubscriptions,
+  cachedDueSubscriptions,
+  cachedListUpcomingSubscriptions,
+  cachedListOverlappingSubscriptions,
+} from "@/lib/supabase/cache";
 
 export const metadata = { title: "Recurring Transactions · Budget" };
 export const dynamic = "force-dynamic";
@@ -57,22 +63,17 @@ function asType(t: string): "expense" | "income" {
 }
 
 export default async function RecurringTransactionsPage() {
-  const supabase = await createSupabaseServerClient();
+  const householdId = await getCurrentHousehold();
 
-  const [
-    { data: subsData },
-    { data: dueData },
-    { data: upcomingData },
-    { data: overlapData },
-  ] = await Promise.all([
-    supabase.rpc("list_subscriptions"),
-    supabase.rpc("list_due_subscriptions"),
-    supabase.rpc("list_upcoming_subscriptions"),
-    supabase.rpc("list_overlapping_subscriptions"),
-  ]);
+  const [subsData, dueData, upcomingData, overlapData] = householdId
+    ? await Promise.all([
+        cachedListSubscriptions(householdId),
+        cachedDueSubscriptions(householdId),
+        cachedListUpcomingSubscriptions(householdId),
+        cachedListOverlappingSubscriptions(householdId),
+      ])
+    : [[], [], [], []];
 
-  // list_subscriptions doesn't return category_name; map ids from due/upcoming
-  // and let the "others" rows show the cadence label as a fallback.
   const detailById = new Map<string, RawDetailRow>();
   for (const r of ((dueData ?? []) as RawDetailRow[])) detailById.set(r.id, r);
   for (const r of ((upcomingData ?? []) as RawDetailRow[])) detailById.set(r.id, r);
