@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCurrentHousehold, finTag, txnTag, recTag } from "@/lib/supabase/cache";
+import { getCurrentHousehold, finTag, txnTag, recTag, sugTag } from "@/lib/supabase/cache";
+import { acceptSuggestion, readSuggestionId } from "@/lib/supabase/suggestions";
 import {
   logExpenseSchema,
   logIncomeSchema,
@@ -67,7 +68,7 @@ export async function logRecurringTransactionExpenseAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const { error } = await supabase.rpc("log_subscription_expense", {
+  const { data, error } = await supabase.rpc("log_subscription_expense", {
     p: {
       subscription_id: recurringTransactionId,
       amount_cents: parsed.data.amount_cents.toString(),
@@ -82,11 +83,19 @@ export async function logRecurringTransactionExpenseAction(
   });
   if (error) return { error: error.message };
 
+  const suggestionId = readSuggestionId(formData);
+  const transactionId = (data as string | null) ?? null;
+  if (suggestionId && transactionId) {
+    const acceptError = await acceptSuggestion(supabase, suggestionId, transactionId);
+    if (acceptError) return { error: acceptError };
+  }
+
   const hid = await getCurrentHousehold();
   if (hid) {
     updateTag(finTag(hid));
     updateTag(txnTag(hid));
     updateTag(recTag(hid));
+    if (suggestionId) updateTag(sugTag(hid));
   }
   redirect("/dashboard");
 }

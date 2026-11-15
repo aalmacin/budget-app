@@ -7,10 +7,12 @@ import { formatCAD } from "@/lib/money";
 import { ActivityRow, type ActivityRowData } from "@/components/transactions/ActivityRow";
 import { RealtimeRefresher } from "./RealtimeRefresher";
 import { DueRecurringTransactionsCard, type DueRow } from "./DueRecurringTransactionsCard";
+import { SuggestedExpensesCard, type SuggestionRow } from "./SuggestedExpensesCard";
 import {
   getCurrentHousehold,
   cachedDashboardSummary,
   cachedDueSubscriptions,
+  cachedExpenseSuggestions,
 } from "@/lib/supabase/cache";
 
 type DashboardSummary = {
@@ -202,6 +204,36 @@ async function DueSubscriptionsSection() {
   return <DueRecurringTransactionsCard rows={dueRows} />;
 }
 
+async function SuggestedExpensesSection() {
+  const householdId = await getCurrentHousehold();
+
+  type RawSuggestionRow = {
+    id: string;
+    merchant: string;
+    amount_cents: number | string;
+    occurred_on: string;
+    category_name: string | null;
+    subscription_id: string | null;
+    subscription_merchant: string | null;
+    notes: string;
+  };
+
+  const data = householdId ? await cachedExpenseSuggestions(householdId) : [];
+  const rows: SuggestionRow[] = ((data ?? []) as RawSuggestionRow[]).map((r) => ({
+    id: r.id,
+    merchant: r.merchant,
+    amount_cents: toBig(r.amount_cents),
+    occurred_on: r.occurred_on,
+    category_name: r.category_name,
+    subscription_id: r.subscription_id,
+    subscription_merchant: r.subscription_merchant,
+    notes: r.notes,
+  }));
+
+  if (rows.length === 0) return null;
+  return <SuggestedExpensesCard rows={rows} />;
+}
+
 async function RealtimeSection() {
   const householdId = await getCurrentHousehold();
   if (!householdId) return null;
@@ -220,6 +252,10 @@ export default function DashboardPage() {
       {/* Due subscriptions stream in independently */}
       <Suspense fallback={null}>
         <DueSubscriptionsSection />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <SuggestedExpensesSection />
       </Suspense>
 
       {/* Hero stats — stream in as one unit */}

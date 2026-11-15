@@ -29,6 +29,8 @@ export type ExpensePrefill = {
   for_member_ids: string[];
   essential_pct: number;
   split_rule: SplitRule | null;
+  /** Only suggestions carry a date; other flows default to today. */
+  occurred_on?: string;
 };
 
 /** When set, the form renders the "Override saved values" template-specific
@@ -56,6 +58,8 @@ type Props = {
   submitLabel?: string;
   /** When set, renders a Cancel link to this href next to submit. */
   cancelHref?: string;
+  /** Agent suggestion being reviewed; marked accepted when the expense saves. */
+  suggestionId?: string;
 };
 
 function centsToDollars(cents: bigint): string {
@@ -73,6 +77,7 @@ export function AddExpenseForm({
   submitAction,
   submitLabel,
   cancelHref,
+  suggestionId,
 }: Props) {
   const action = submitAction ?? logExpenseAction;
   const [state, formAction, pending] = useActionState(action, INITIAL);
@@ -126,8 +131,15 @@ export function AddExpenseForm({
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-muted font-mono uppercase tracking-wider">Date</span>
-        <Input type="date" name="occurred_on" defaultValue={todayIso} required />
+        <Input
+          type="date"
+          name="occurred_on"
+          defaultValue={prefill?.occurred_on ?? todayIso}
+          required
+        />
       </label>
+
+      {suggestionId && <input type="hidden" name="suggestion_id" value={suggestionId} />}
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-muted font-mono uppercase tracking-wider">Category</span>
