@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCurrentHousehold, finTag, txnTag, catTag, mchTag, recTag, qaTag } from "@/lib/supabase/cache";
+import { getCurrentHousehold, finTag, txnTag, catTag, mchTag, recTag, qaTag, sugTag } from "@/lib/supabase/cache";
+import { acceptSuggestion, readSuggestionId } from "@/lib/supabase/suggestions";
 import { logExpenseSchema, recurringSchema } from "@/lib/validators/transaction";
 
 export type LogExpenseState = { error: string | null };
@@ -78,6 +79,8 @@ export async function logExpenseAction(
   }
 
   const isRecurring = raw.recurring === "on";
+  const suggestionId = readSuggestionId(formData);
+  let transactionId: string | null = null;
 
   if (isRecurring) {
     const recurringParsed = recurringSchema.safeParse({
@@ -97,7 +100,7 @@ export async function logExpenseAction(
       return { error: "interval_days only allowed when cadence=custom_days" };
     }
 
-    const { error } = await supabase.rpc("log_expense_with_subscription", {
+    const { data, error } = await supabase.rpc("log_expense_with_subscription", {
       p: {
         ...parsed.data,
         amount_cents: parsed.data.amount_cents.toString(),
@@ -107,14 +110,23 @@ export async function logExpenseAction(
       },
     });
     if (error) return { error: error.message };
+    transactionId = (data as string | null) ?? null;
   } else {
-    const { error } = await supabase.rpc("log_expense", {
+    // Reusing the suggestion's id makes a double submit insert only once.
+    const { data, error } = await supabase.rpc("log_expense", {
       p: {
         ...parsed.data,
+        ...(suggestionId ? { id: suggestionId } : {}),
         amount_cents: parsed.data.amount_cents.toString(),
       },
     });
     if (error) return { error: error.message };
+    transactionId = (data as string | null) ?? null;
+  }
+
+  if (suggestionId && transactionId) {
+    const acceptError = await acceptSuggestion(supabase, suggestionId, transactionId);
+    if (acceptError) return { error: acceptError };
   }
 
   const templateId = ((raw.template_id as string | undefined) ?? "").trim();
@@ -162,6 +174,7 @@ export async function logExpenseAction(
     updateTag(mchTag(hid));
     updateTag(recTag(hid));
     updateTag(qaTag(hid));
+    if (suggestionId) updateTag(sugTag(hid));
   }
   redirect("/dashboard");
 }

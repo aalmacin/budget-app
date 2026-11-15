@@ -12,6 +12,7 @@ export const mchTag = (id: string) => `hh:${id}:mch`;
 export const recTag = (id: string) => `hh:${id}:rec`;
 export const bgtTag = (id: string) => `hh:${id}:bgt`;
 export const qaTag = (id: string) => `hh:${id}:qa`;
+export const sugTag = (id: string) => `hh:${id}:sug`;
 
 // Per-request memoization — deduplicates get_current_household within a single render pass
 export const getCurrentHousehold = cache(async (): Promise<string | null> => {
@@ -66,6 +67,21 @@ export async function cachedDueSubscriptions(id: string) {
     },
     [`due:${id}`],
     { tags: [recTag(id), finTag(id)], revalidate: 30 },
+  )();
+}
+
+// Suggestions are written by the agent outside the app, so no tag fires on
+// insert; the short TTL is what makes new ones appear.
+export async function cachedExpenseSuggestions(id: string) {
+  const jwt = await getJwt();
+  return unstable_cache(
+    async () => {
+      const supabase = createBearerClient(jwt);
+      const { data } = await supabase.rpc("list_expense_suggestions");
+      return data ?? [];
+    },
+    [`sug:${id}`],
+    { tags: [sugTag(id)], revalidate: 30 },
   )();
 }
 

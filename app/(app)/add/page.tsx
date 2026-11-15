@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSuggestionPrefill } from "@/lib/supabase/suggestions";
 import { PageTitle } from "@/components/ui/PageTitle";
 import { AppBar } from "@/components/ui/AppBar";
 import {
@@ -30,11 +31,12 @@ type RawTemplate = {
 export default async function AddExpensePage({
   searchParams,
 }: {
-  searchParams: Promise<{ template?: string }>;
+  searchParams: Promise<{ template?: string; suggestion?: string }>;
 }) {
   const supabase = await createSupabaseServerClient();
   const sp = await searchParams;
-  const templateId = sp.template ?? null;
+  const suggestion = sp.suggestion ? await getSuggestionPrefill(supabase, sp.suggestion) : null;
+  const templateId = suggestion ? null : (sp.template ?? null);
 
   // Principle III: clients call RPCs, never `.from()` against household tables.
   const [{ data: categoriesData }, { data: membersData }, { data: merchantsData }] =
@@ -56,7 +58,7 @@ export default async function AddExpensePage({
     .map((m) => m.name)
     .filter(Boolean);
 
-  let prefill: ExpensePrefill | null = null;
+  let prefill: ExpensePrefill | null = suggestion?.prefill ?? null;
   let template: ExpenseTemplateRef | null = null;
   if (templateId) {
     const { data: tplRows } = await supabase.rpc("get_saved_expense", {
@@ -92,8 +94,14 @@ export default async function AddExpensePage({
     <div className="pt-3">
       <AppBar />
       <PageTitle
-        title={template ? `Add expense (from ${template.merchant})` : "Add expense"}
-        subtitle="Money out"
+        title={
+          suggestion
+            ? `Review ${suggestion.prefill.merchant}`
+            : template
+              ? `Add expense (from ${template.merchant})`
+              : "Add expense"
+        }
+        subtitle={suggestion ? suggestion.subtitle : "Money out"}
       />
       <AddExpenseForm
         categories={categories}
@@ -102,6 +110,8 @@ export default async function AddExpensePage({
         todayIso={today}
         prefill={prefill}
         template={template}
+        suggestionId={suggestion?.id}
+        cancelHref={suggestion ? "/dashboard" : undefined}
       />
     </div>
   );

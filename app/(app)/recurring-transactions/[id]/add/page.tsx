@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSuggestionPrefill } from "@/lib/supabase/suggestions";
 import { AppBar } from "@/components/ui/AppBar";
 import { PageTitle } from "@/components/ui/PageTitle";
 import {
@@ -41,11 +42,16 @@ type IncomeCategoryRow = { id: string };
 
 export default async function RecurringTransactionAddPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ suggestion?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const supabase = await createSupabaseServerClient();
+  const loaded = sp.suggestion ? await getSuggestionPrefill(supabase, sp.suggestion) : null;
+  const suggestion = loaded && loaded.subscriptionId === id ? loaded : null;
 
   const { data: prefillRows, error: prefillErr } = await supabase.rpc(
     "get_subscription_prefill",
@@ -144,6 +150,12 @@ export default async function RecurringTransactionAddPage({
     for_member_ids: row.for_member_id ? [row.for_member_id] : [],
     essential_pct: row.essential_pct,
     split_rule: row.split_rule,
+    ...(suggestion
+      ? {
+          amount_cents: suggestion.prefill.amount_cents,
+          occurred_on: suggestion.prefill.occurred_on,
+        }
+      : {}),
   };
   const bound = logRecurringTransactionExpenseAction.bind(null, id);
 
@@ -152,7 +164,11 @@ export default async function RecurringTransactionAddPage({
       <AppBar />
       <PageTitle
         title={`Log ${row.merchant}`}
-        subtitle={`Renewal was ${row.next_renewal_at}`}
+        subtitle={
+          suggestion
+            ? `${suggestion.subtitle} · renewal was ${row.next_renewal_at}`
+            : `Renewal was ${row.next_renewal_at}`
+        }
       />
       <AddExpenseForm
         categories={categories}
@@ -163,7 +179,8 @@ export default async function RecurringTransactionAddPage({
         template={null}
         submitAction={bound}
         submitLabel="Save & advance"
-        cancelHref="/recurring-transactions"
+        cancelHref={suggestion ? "/dashboard" : "/recurring-transactions"}
+        suggestionId={suggestion?.id}
       />
     </div>
   );
